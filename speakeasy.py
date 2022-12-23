@@ -5,7 +5,7 @@ import math
 #  Example Layout:
 #   _________________________
 #  | 0. Naman 3:37 / 5:32    |
-#  > 1. Evan 1:32 / 1:32     <   
+#  |>1. Evan 1:32 / 1:32    <|   
 #  |    L Grace 3:13 / 5:31  |
 #  |    L Naman 1:24 / 5:32  |
 #  |    L Cici 4:02 / 5:50   |
@@ -24,14 +24,12 @@ import math
 # Let's define some things :) #
 ###############################
 
-do_hints = True
-prioritize_shy_speakers = True
-
-
-def format_time(t):
+def format_time(t): 
+    # t :: Int such that t >= 0
     return (str(t/60) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
 
-def detect_partial_match(a,b):
+def detect_partial_match(a,b): 
+    # String, String -> Bool
     if len(a) == 0 or len(b) < len(a):
         return False
     else:
@@ -40,111 +38,74 @@ def detect_partial_match(a,b):
                 return False
         return True
 
-class Speaker:
+def sorted_insert(list, new_element, comparison_function):
+    # list :: [t]
+    # new_element :: [t]
+    # comparison_function :: t, t -> Bool
+    for i in range(len(list)):
+        if comparison_function(new_element, list[i]):
+            break
+        elif i == len(list)-1:
+            list.append(new_element)
+            return
+    list.insert(i, new_element)
     
-        # Static Varaiables
-        roster = []
+def _audit_global_functions():
+    
+    lst = [1,2,3,5]
+    sorted_insert(lst, 4, comparison_function=lambda x,y: x < y)
+    assert(lst==[1,2,3,4,5])
 
-        # Static Methods
-        @classmethod
-        def search_roster(cls, name, allow_creation=False, matching_function=(lambda a,b: a == b)):
-            for speaker in cls.roster:
-                if (matching_function(name.upper(),speaker.get_name())):
-                    return speaker
-            if (allow_creation):
-                return cls(name)
-            else:
-                return False
+    lst = [1,2,3,5]
+    sorted_insert(lst, 200, comparison_function=lambda x,y: x < y)
+    assert(lst==[1,2,3,5,200])
 
-        # Constructors
-        def __init__(self, name):
-            self.__name = name.upper()
-            self.__total_speaking_time = 0
-            self.__number_of_speaches = 0
-            self.__number_of_resonses = 0
-            Speaker.roster += [self]
+    lst = [1,2,3,5]
+    sorted_insert(lst, -200, comparison_function=lambda x,y: x < y)
+    assert(lst==[-200, 1,2,3,5])
 
-        # Getters
-        def get_name(self):
-            return self.__name
-        
-        def get_speaking_time(self):
-            return self.__total_speaking_time
+    lst = [5,4,2,1]
+    sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
+    assert(lst==[5,4,3,2,1])
 
-        # Setters
-        def _tick_speaking_time(self): # This is called automatically by Speach.tick_speach_time(self), and should really not be called by anything else
-            self.__total_speaking_time += 1
+_audit_global_functions()
+
+
+class Speaker: 
+    # Constructors
+    def __init__(self, name):
+        self.__name = name.upper()
+        self.__total_speaking_time = 0
+        self.__number_of_speaches_given = 0
+
+    # Getters
+    def get_name(self):
+        return self.__name
+
+    def name_is(self, query, matching_function=(lambda query, actual_uppercase_name: query.uppercase() == actual_uppercase_name)):
+        return matching_function(query, self.get_name())
+    
+    def get_total_speaking_time(self):
+        return self.__total_speaking_time
+
+    def get_number_of_speaches_given(self):
+        return self.__number_of_speaches_given
+
+    # Pseudoprivate Methods
+    def _tick_speaking_time(self):
+        self.__total_speaking_time += 1
+
+    def _increment_number_of_speaches(self):
+        self.__number_of_speaches_given += 1
 
 class Speach:
-
-    # Static Variables
-    speaking_order = []
-    current_speach_index = 0
-    current_response_index = -1
-    net_duration = 0
-
-    # Static Methods
-    @classmethod
-    def get_current_speach_index(cls, include_responses=False):
-        ret = cls.current_speach_index
-        if include_responses:
-            for i in range(cls.current_speach_index):
-                ret += len(Speach.speaking_order[i].get_responses())
-        return ret
-    
-    @classmethod
-    def get_current_response_index(cls):
-        return cls.current_response_index
-
-    @classmethod
-    def get_number_of_ones(cls):
-        return len(cls.speaking_order)
-
-    @classmethod
-    def get_total_number_of_speaches(cls):
-        number_of_responses = 0
-        for speach in cls.speaking_order:
-            number_of_responses += len(speach.get_responses())
-        return cls.get_number_of_ones() + number_of_responses
-
-    @classmethod
-    def get_current_speach(cls):
-        return cls.speaking_order[cls.current_speach_index]
-
-    @classmethod
-    def goto_next_speach(cls):
-        if cls.current_response_index+1 < len(cls.get_current_speach().get_responses()):
-            cls.current_response_index += 1
-        elif cls.get_current_speach_index() < cls.get_number_of_ones()-1:
-            cls.current_speach_index += 1
-            cls.current_response_index = -1
-    
-    @classmethod
-    def goto_previous_speach(cls):
-        if cls.current_response_index > -1:
-            cls.current_response_index -= 1
-        elif cls.current_speach_index > 0:
-            cls.current_speach_index -= 1
-            cls.current_response_index = len(cls.get_current_speach().get_responses())-1
-    
-    @classmethod
-    def tick_clock(cls):
-        if cls.get_current_response_index() < 0:
-            cls.get_current_speach().tick_speach_time()
-        else:
-            cls.get_current_speach().get_responses()[cls.get_current_response_index()].tick_speach_time() 
-
     # Constructors
-    def __init__(self, name, index='auto'):
-        self.__speaker = Speaker.search_roster(name, allow_creation=True)
+    def __init__(self, speaker, is_response): # speaker: Speaker
+        speaker._increment_number_of_speaches()
+        self.__speaker = speaker
         self.__duration = 0
-        self.__responses = []
-        if index == 'auto':
-            self.__index = len(Speach.speaking_order)
-            Speach.speaking_order += [self]
-        else:
-            self.__index = index
-        
+        self.IS_RESPONSE = is_response
+
     # Getters
     def get_speaker(self):
         return self.__speaker
@@ -152,37 +113,128 @@ class Speach:
     def get_duration(self):
         return self.__duration
 
-    def get_number(self):
-        return self.__index
-
     def get_responses(self):
         return self.__responses
     
-    # Setters
-    def tick_speach_time(self):
+    # Pseudoprivate Methods
+    def _tick_speach_time(self):
         self.__duration += 1
         self.get_speaker()._tick_speaking_time()
-        Speach.net_duration += 1
 
-    def respond(self, name):
-        self.__responses += [Speach(name,index=len(self.get_responses()))]
+class Discussion:
 
-#Speach('Cici')
-#Speach('Naman')
-#Speach('Evan')
-#Speach('Cici')
-#Speach('Naman')
-#Speach('Evan')
-#Speach('Grace')
+    # Constructors
+    def __init__(self, mover):
+        self.__speakers = [mover]
+        self.__current_speach = Speach(speaker=mover, is_response=False)
+        self.__upcoming_speaches = []
+        self.__number_of_upcoming_new_points = 0
+        self.__number_of_upcoming_responses = 0
+        self.__past_speaches = []
+        self.__duration = 0
 
-#Speach('Naman')
-#Speach('Evan')
-#Speach.speaking_order[2].respond('Marcus')
-#Speach.speaking_order[2].respond('Nick')
-#Speach.speaking_order[4].respond('Marcus')
-#Speach.speaking_order[4].respond('Nick')
-#Speach.speaking_order[4].respond('Lily')
-#Speach.speaking_order[4].respond('Daniel')
+    # Getters
+    def get_current_speach(self):
+        return self.__current_speach
+
+    def take_upcoming_speaches(self, how_many=False, remove_whats_been_taken=False): # how_many: False or Int>0
+        # Returns how_many of the upcoming speaches in order
+        # If how_many=False or if how_many is greater than the number of upcoming speaches, then it returns all of the upcoming speaches
+        # If remove_whats_been_taken=True, then all the speaches returned by this function will be removed from the list of upcoming speaches. Use this option carefully and sparingly!
+        if how_many == False:
+            number_of_responses_remaining = self.get_number_of_upcoming_responses()
+            number_of_new_points_remaining = self.get_number_of_upcoming_new_points()
+        else:
+            number_of_responses_remaining = min(self.get_number_of_upcoming_responses(), how_many)
+            number_of_new_points_remaining = min(self.get_number_of_upcoming_new_points(), how_many-number_of_responses_remaining)
+        responses = []
+        new_points = []
+        if remove_whats_been_taken:
+            untaken = []
+        for speach in self.__upcoming_speaches:
+            if speach.IS_RESPONSE:
+                if number_of_responses_remaining > 0:
+                    responses.append(speach)
+                    number_of_responses_remaining -= 1
+                elif remove_whats_been_taken:
+                    untaken.append(speach)
+            else:
+                if number_of_new_points_remaining > 0:
+                    new_points.append(speach)
+                    number_of_new_points_remaining -= 1
+                elif remove_whats_been_taken:
+                    untaken.append(speach)
+        if remove_whats_been_taken:
+            self.__upcoming_speaches = untaken
+        return responses+new_points
+    
+    def get_number_of_upcoming_new_points(self):
+        return self.__number_of_upcoming_new_points
+
+    def get_number_of_upcoming_responses(self):
+        return self.__number_of_upcoming_responses
+
+    def get_number_of_upcoming_speaches(self):
+        return self.get_number_of_upcoming_new_points()+self.get_number_of_upcoming_responses()
+
+    def get_past_speaches(self):
+        return self.__past_speaches
+
+    def get_duration(self):
+        return self.__duration
+
+    def find_speaker(self, name, matching_function=(lambda a,b: a==b)): # name: String, matching_function: Function (String String -> Bool)
+        # Searches through the speakers currently listed to find one matching name where a "match" is defined by matching_function
+        # Matching function should take two strings and return True if the strings match and False otherwise
+        # It should be noted that matching_function is not necessarily commutative, and it is specifically asking if the first argument matches the second one (rather than asking if the second argument matches the first one). This is a subtle distinction but just keep in mind the way the matching_function is used. The first argument passed is our search and the second argument is the alledged actual name we are looking for. In other words, the first argument may be incomplete, or it may have typoes, or whatever other things I or someone else wants to impliment. The second argument is the flawless platonic ideal
+        for speaker in self.__speakers:
+            if (matching_function(name.upper(), speaker.get_name())):
+                return speaker
+        return False
+    
+    # Setters
+    def add_speach(self, speaker_name, is_response):
+        speaker = self.find_speaker(speaker_name)
+        if speaker == False:
+            speaker = Speaker(speaker_name)
+            self.__speakers.append(speaker)
+        self.__upcoming_speaches.append(Speach(speaker, is_response))
+        if is_response:
+            self.__number_of_upcoming_responses += 1
+        else:
+            self.__number_of_upcoming_new_points += 1
+
+    def goto_next_speach(self):
+        upcoming_speaches = self.take_upcoming_speaches(how_many=1, remove_whats_been_taken=True)
+        if upcoming_speaches != []:
+            self.__past_speaches.append(self.__current_speach)
+            self.__current_speach = upcoming_speaches[0]
+            if self.__current_speach.IS_RESPONSE:
+                self.__number_of_upcoming_responses -= 1
+            else:
+                self.__number_of_upcoming_new_points -= 1
+
+    def goto_previous_speach(self):
+        if self.__past_speaches != []:
+            if self.__current_speach.IS_RESPONSE:
+                self.__number_of_upcoming_responses += 1
+            else:
+                self.__number_of_upcoming_new_points += 1
+            self.__upcoming_speaches.insert(0, self.get_current_speach())
+            self.__current_speach = self.__past_speaches[-1]
+            self.__past_speaches = self.__past_speaches[:-1]
+
+    def tick_clock(self):
+        self.__duration += 1
+        self.get_current_speach()._tick_speach_time()
+
+    # Pseudoprivate
+    def _audit(self):
+        pass
+
+discussion = Discussion(mover=Speaker('Cici'))
+discussion.add_speach('Naman',is_response=True)
+discussion.add_speach('Evan',is_response=False)
 
 def main(stdscr):
 
@@ -191,19 +243,19 @@ def main(stdscr):
     #    curses.curs_set(False)
     #except curses.error:
     #    pass
+
+    global discussion
+    do_hints = True
+    prioritize_shy_speakers = True
     
     while(True):
-        
-        #try:
+
         APP_WIDTH = 50
         APP_X_POS = (curses.COLS-APP_WIDTH)/2
         APP_Y_POS = 10
 
-        SPEAKERS_HEIGHT = 30
-        SPEAKERS_Y_POS = 1
-
-        LAST_SPEAKER_HEIGHT = 4
-        LAST_SPEAKER_Y_POS = SPEAKERS_Y_POS+SPEAKERS_HEIGHT-LAST_SPEAKER_HEIGHT
+        SPEAKERS_HEIGHT = 10
+        SPEAKERS_Y_POS = 0
         
         CLOCK_HEIGHT = 1
         CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
@@ -243,44 +295,64 @@ def main(stdscr):
         
         stdscr.refresh()
         
-        speakers_box = curses.newpad(1000, APP_WIDTH)
-        last_speaker_box = curses.newwin(LAST_SPEAKER_HEIGHT, APP_WIDTH, APP_Y_POS+LAST_SPEAKER_Y_POS, APP_X_POS)
+        speakers_box = curses.newwin(SPEAKERS_HEIGHT, APP_WIDTH, APP_Y_POS+SPEAKERS_Y_POS, APP_X_POS)
         def update_speakers_box():
 
-            def add_speaker(header, speach, highlight=False,box=speakers_box):
+            def add_speaker(header, speach, do_newline=True, box=speakers_box, highlight=False):
                 speaker_name = speach.get_speaker().get_name().capitalize()
-                speaker_time = format_time(speach.get_duration()) + ' / ' + format_time(speach.get_speaker().get_speaking_time())
+                speaker_time = format_time(speach.get_duration()) + ' / ' + format_time(speach.get_speaker().get_total_speaking_time())
                 box.addch(curses.ACS_RARROW if highlight else ' ')
                 for ch in header:
                     box.addch(ch)
                 box.addstr(speaker_name, curses.A_BOLD if highlight else 0)
                 for x in range(len(header) + len(speaker_name) + 2, APP_WIDTH-len(speaker_time)-2):
                     box.addch('.')
-                
                 box.addstr(speaker_time)
                 box.addch(' ')
                 box.addch(curses.ACS_LARROW if highlight else ' ')
+                if do_newline:
+                    box.addch('\n')
 
-            make_seperate_box_for_last_speach = Speach.get_total_number_of_speaches()-Speach.get_current_speach_index()-Speach.get_current_response_index() > SPEAKERS_HEIGHT+2 # I'm not entirely sure where this 2 comes from, and it worries me that I can't account for it, but it seems to make it work right...
+            make_seperate_box_for_last_speach = False
 
             speakers_box.clear()
-            for speach in Speach.speaking_order:
-                highlight_this_or_a_response = speach.get_number() == Speach.get_current_speach_index()
-                add_speaker(' ' + str(speach.get_number()) + '. ', speach, highlight_this_or_a_response and Speach.current_response_index == -1)
-                speakers_box.addch('\n')
-                if len(speach.get_responses()) != 0:
-                    for response in speach.get_responses()[:-1]:
-                        add_speaker([' ',' ',' ',' ',curses.ACS_LTEE], response, highlight_this_or_a_response and Speach.current_response_index == response.get_number())
-                        speakers_box.addch('\n')
-                    response = speach.get_responses()[-1] 
-                    add_speaker([' ',' ',' ',' ',curses.ACS_LLCORNER], response, highlight_this_or_a_response and Speach.current_response_index == response.get_number())
-                    speakers_box.addch('\n')
-            speakers_box.refresh(Speach.get_current_speach_index(include_responses=True)+Speach.get_current_response_index()+1 ,0, APP_Y_POS, APP_X_POS, APP_Y_POS+SPEAKERS_HEIGHT-(LAST_SPEAKER_HEIGHT if make_seperate_box_for_last_speach else 0), APP_X_POS+APP_WIDTH)
-            if make_seperate_box_for_last_speach:
-                last_speaker_box.clear()
-                last_speaker_box.addstr('  *\n  *\n  *\n')
-                add_speaker(' ' + str(len(Speach.speaking_order)-1) + '. ',Speach.speaking_order[-1],highlight=False,box=last_speaker_box)
-                last_speaker_box.refresh()
+
+            number_of_past_speaches_displayed = min(3,len(discussion.get_past_speaches()))
+            
+            # This requires a bit of explanation, because it's a little more than just the straight speaking order. I've also allowed for some flags which affect properties of any speach that comes after
+            # hlt - turns on highlight
+            # nhlt - turn off highlight
+            # endl - put a '\n' at the end of the line
+            # nendl - don't put a '\n' at the end of the line
+            speaking_order = discussion.get_past_speaches()[-3:] + ['hlt', discussion.get_current_speach(), 'nhlt'] + discussion.take_upcoming_speaches(how_many=SPEAKERS_HEIGHT-number_of_past_speaches_displayed-1) # [Speach or 'highlight' or 'nonl']
+            speaking_order.insert(-1,'nendl')
+
+            highlight = False
+            do_newline = True
+            # n = max(0, len(discussion.get_past_speaches())-3)
+            for i in range(len(speaking_order)):
+                if type(speaking_order[i]) == str:
+                    if speaking_order[i] == 'hlt':
+                        highlight = True
+                    elif speaking_order[i] == 'nhlt':
+                        highlight = False
+                    elif speaking_order[i] == 'endl':
+                        do_newline = True
+                    elif speaking_order[i] == 'nendl':
+                        do_newline = False
+                else:
+                    if speaking_order[i].IS_RESPONSE:
+                        header = [' ']
+                        if False: #i+1 < len(speaking_order) and speaking_order[i+1].IS_RESPONSE:
+                            header += [curses.ACS_LTEE]
+                        else:
+                            header += [curses.ACS_LLCORNER]
+                    else:
+                        header = ' ' # + str(n) + '. '
+                        # n += 1
+                    add_speaker(header, speaking_order[i], do_newline=do_newline, highlight=highlight)
+
+            speakers_box.refresh()
 
         update_speakers_box()
         
@@ -289,13 +361,6 @@ def main(stdscr):
         clock_label = curses.newwin(CLOCK_HEIGHT, CLOCK_LABEL_WIDTH+1, APP_Y_POS+CLOCK_Y_POS, APP_X_POS)
         clock_label.addstr(CLOCK_LABEL_TEXT, curses.A_BOLD)
         clock_label.refresh()
-
-        clock_face = curses.newwin(CLOCK_HEIGHT, APP_WIDTH-CLOCK_LABEL_WIDTH, APP_Y_POS+CLOCK_Y_POS, APP_X_POS+CLOCK_LABEL_WIDTH)
-        def update_clock():
-            clock_face.clear()
-            clock_face.addstr(format_time(Speach.net_duration))
-            clock_face.refresh()
-        update_clock()
 
         PROMPT_TEXT = 'Add Speaker: '
         PROMPT_WIDTH = len(PROMPT_TEXT)
@@ -309,10 +374,18 @@ def main(stdscr):
 
         subprompt_win = curses.newwin(SUBPROMPT_HEIGHT, APP_WIDTH, APP_Y_POS+SUBPROMPT_Y_POS, APP_X_POS)
 
+        clock_face = curses.newwin(CLOCK_HEIGHT, APP_WIDTH-CLOCK_LABEL_WIDTH, APP_Y_POS+CLOCK_Y_POS, APP_X_POS+CLOCK_LABEL_WIDTH)
+        def update_clock():
+            clock_face.clear()
+            clock_face.addstr(format_time(discussion.get_duration()))
+            clock_face.refresh()
+            input_win.refresh()
+        update_clock()
+
         input_content = ''
         autocomplete_guess = ''
         def subprompt_autocomplete():
-            speaker_guess = Speaker.search_roster(input_content, allow_creation=False, matching_function=detect_partial_match)
+            speaker_guess = discussion.find_speaker(input_content, matching_function=detect_partial_match)
             subprompt_win.clear()
             if speaker_guess == False:
                 autocomplete_guess = ''
@@ -328,14 +401,14 @@ def main(stdscr):
 
         while(True):
             
-            if Speach.speaking_order != []:
-                current_time =  math.trunc(time.time())
+            current_time =  math.trunc(time.time())
                 
-                if current_time > most_recent_recorded_time:
-                    Speach.tick_clock()
-                    update_speakers_box()
-                    update_clock()
-                    most_recent_recorded_time = current_time
+            if current_time > most_recent_recorded_time:
+                discussion.tick_clock() 
+                update_speakers_box()
+                update_clock()
+                most_recent_recorded_time = current_time
+
             try:
                 key = input_win.getkey()
                 ord(key) # Just making sure that this function works, because for some reason it occasionally gets strings of length 10
@@ -343,12 +416,13 @@ def main(stdscr):
                 continue
             
             if mode == 0:
-                if ord(key) == 127:
+                if ord(key) == 127: # Backspace
                     input_content = input_content[:-1]
                     autocomplete_guess = subprompt_autocomplete()
                 elif key == ' ' or (ord(key) >= ord('a') and ord(key) <= ord('z')) or (ord(key) >= ord('A') and ord(key) <= ord('Z')) :
-                    input_content += key
-                    autocomplete_guess=subprompt_autocomplete()
+                    if len(input_content) < APP_WIDTH-PROMPT_WIDTH-1:
+                        input_content += key
+                        autocomplete_guess = subprompt_autocomplete()
                 elif ord(key) == 4: # Ctrl-D (Terminate program)
                     return
                 elif ord(key) == 9: # Tab
@@ -373,14 +447,13 @@ def main(stdscr):
                 elif ord(key) == 18: # Ctrl-R (Re-render)
                     break
                 elif ord(key) == 8: # Ctrl-H (Toggle Hints)
-                    global do_hints
                     do_hints = not do_hints
                     break
                 elif ord(key) == 14: # Ctrl-N (Next)
-                    Speach.goto_next_speach()
+                    discussion.goto_next_speach()
                     update_speakers_box()
                 elif ord(key) == 2: # Ctrl-B (Go back to previous speach)
-                    Speach.goto_previous_speach()
+                    discussion.goto_previous_speach()
                     update_speakers_box()
                 else:
                     subprompt_win.clear()
@@ -395,27 +468,16 @@ def main(stdscr):
                 input_win.refresh()
 
             elif mode == 1:
-                if key == '1':
-                    Speach(input_content)
+                if key == '1' or key == '2':
+                    discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
                     update_speakers_box()
-
                     subprompt_win.clear()
                     subprompt_win.refresh()
                     input_content = ''
                     input_win.clear()
                     input_win.refresh()
                     mode = 0
-
-                elif key == '2':
-                    Speach.get_current_speach().respond(input_content)
-                    update_speakers_box()
-
-                    subprompt_win.clear()
-                    subprompt_win.refresh()
-                    input_content = ''
-                    input_win.clear()
-                    input_win.refresh()
-                    mode = 0
+                    
                 elif ord(key) == 27: # Escape
                     subprompt_win.clear()
                     subprompt_win.refresh()
@@ -425,4 +487,5 @@ def main(stdscr):
                     mode = 0
 
 
+#discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
 curses.wrapper(main)
