@@ -42,13 +42,17 @@ def sorted_insert(list, new_element, comparison_function):
     # list :: [t]
     # new_element :: [t]
     # comparison_function :: t, t -> Bool
-    for i in range(len(list)):
-        if comparison_function(new_element, list[i]):
-            break
-        elif i == len(list)-1:
+    i = 0
+    len_list = len(list)
+    while(True):
+        if i >= len_list:
             list.append(new_element)
             return
-    list.insert(i, new_element)
+        elif comparison_function(new_element, list[i]):
+            list.insert(i, new_element)
+            return
+        i += 1
+    
     
 def _audit_global_functions():
     
@@ -69,7 +73,6 @@ def _audit_global_functions():
     assert(lst==[5,4,3,2,1])
 
 _audit_global_functions()
-
 
 class Speaker: 
     # Constructors
@@ -99,6 +102,7 @@ class Speaker:
         self.__number_of_speaches_given += 1
 
 class Speach:
+
     # Constructors
     def __init__(self, speaker, is_response): # speaker: Speaker
         speaker._increment_number_of_speaches()
@@ -132,6 +136,10 @@ class Discussion:
         self.__number_of_upcoming_responses = 0
         self.__past_speaches = []
         self.__duration = 0
+        self.__priority_mode = 2
+        # 0 - No priority
+        # 1 - Speakers who have raised the least number of points get to go first (not implemented yet)
+        # 2 - Those who have spoken for the lowest amount of time get to go first
 
     # Getters
     def get_current_speach(self):
@@ -141,6 +149,14 @@ class Discussion:
         # Returns how_many of the upcoming speaches in order
         # If how_many=False or if how_many is greater than the number of upcoming speaches, then it returns all of the upcoming speaches
         # If remove_whats_been_taken=True, then all the speaches returned by this function will be removed from the list of upcoming speaches. Use this option carefully and sparingly!
+        
+        if self.get_priority_mode() == 2:
+            def add_element(elem, lst):
+                sorted_insert(lst, elem, (lambda s1,s2: s1.get_speaker().get_total_speaking_time() < s2.get_speaker().get_total_speaking_time()))
+        else:
+            def add_element(elem, lst):
+                lst.append(elem)
+
         if how_many == False:
             number_of_responses_remaining = self.get_number_of_upcoming_responses()
             number_of_new_points_remaining = self.get_number_of_upcoming_new_points()
@@ -154,13 +170,13 @@ class Discussion:
         for speach in self.__upcoming_speaches:
             if speach.IS_RESPONSE:
                 if number_of_responses_remaining > 0:
-                    responses.append(speach)
+                    add_element(speach,responses)
                     number_of_responses_remaining -= 1
                 elif remove_whats_been_taken:
                     untaken.append(speach)
             else:
                 if number_of_new_points_remaining > 0:
-                    new_points.append(speach)
+                    add_element(speach,new_points)
                     number_of_new_points_remaining -= 1
                 elif remove_whats_been_taken:
                     untaken.append(speach)
@@ -182,6 +198,9 @@ class Discussion:
 
     def get_duration(self):
         return self.__duration
+
+    def get_priority_mode(self):
+        return self.__priority_mode
 
     def find_speaker(self, name, matching_function=(lambda a,b: a==b)): # name: String, matching_function: Function (String String -> Bool)
         # Searches through the speakers currently listed to find one matching name where a "match" is defined by matching_function
@@ -254,7 +273,7 @@ def main(stdscr):
         APP_X_POS = (curses.COLS-APP_WIDTH)/2
         APP_Y_POS = 10
 
-        SPEAKERS_HEIGHT = 10
+        SPEAKERS_HEIGHT = 30
         SPEAKERS_Y_POS = 0
         
         CLOCK_HEIGHT = 1
@@ -279,7 +298,7 @@ def main(stdscr):
             stdscr.addch(APP_Y_POS-1,x, curses.ACS_HLINE)
             stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,x, curses.ACS_HLINE)
             stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, x, curses.ACS_HLINE)
-        for y in range(APP_Y_POS, APP_Y_POS+1+SPEAKERS_HEIGHT):
+        for y in range(APP_Y_POS, APP_Y_POS+SPEAKERS_HEIGHT):
             stdscr.addch(y, APP_X_POS-1, curses.ACS_VLINE)
             stdscr.addch(y, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
 
@@ -312,8 +331,6 @@ def main(stdscr):
                 box.addch(curses.ACS_LARROW if highlight else ' ')
                 if do_newline:
                     box.addch('\n')
-
-            make_seperate_box_for_last_speach = False
 
             speakers_box.clear()
 
