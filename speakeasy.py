@@ -52,7 +52,10 @@ def sorted_insert(list, new_element, comparison_function):
             list.insert(i, new_element)
             return
         i += 1
-    
+
+def slos(los): # show list of speaches
+    for s in los:
+        print(s.get_speaker().get_name() + ('(R)' if s.IS_RESPONSE else ''))
     
 def _audit_global_functions():
     
@@ -252,8 +255,9 @@ class Discussion:
         pass
 
 discussion = Discussion(mover=Speaker('Cici'))
-discussion.add_speach('Naman',is_response=True)
 discussion.add_speach('Evan',is_response=False)
+discussion.add_speach('Cici',is_response=False)
+discussion.add_speach('Grace',is_response=False)
 
 def main(stdscr):
 
@@ -505,4 +509,4 @@ def main(stdscr):
 
 
 #discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
-curses.wrapper(main)
+#curses.wrapper(main)
