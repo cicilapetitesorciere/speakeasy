@@ -66,7 +66,7 @@ def slos(los):
     for s in los:
         print(s.get_speaker().get_name() + ('(R)' if s.IS_RESPONSE else ''))
     
-def _audit_global_functions():
+def _test_global_functions():
     # Returns Void
     # Does some tests
     lst = [1,2,3,5]
@@ -266,7 +266,23 @@ class Discussion:
 
     # Pseudoprivate
     def _audit(self):
-        pass
+        number_of_actual_upcoming_new_points = 0
+        number_of_actual_upcoming_responses = 0
+        for speach in self.__upcoming_speaches:
+            if speach.IS_RESPONSE:
+                number_of_actual_upcoming_responses += 1
+            else:
+                number_of_actual_upcoming_new_points += 1
+        assert(number_of_actual_upcoming_new_points == self.get_number_of_upcoming_new_points())
+        assert(number_of_actual_upcoming_responses == self.get_number_of_upcoming_responses())
+
+        actual_duration = self.__current_speach.get_duration()
+        for speach in self.__past_speaches:
+            actual_duration += speach.get_duration()
+        
+        assert(actual_duration == self.__duration)
+
+
 
 def main(stdscr):
 
