@@ -26,15 +26,20 @@ import math
 
 def format_time(t): 
     # t :: Int such that t >= 0
+    # Returns String
+    # Takes some duration t in seconds and returns a string representing that duration in terms of minutes and seconds
     return (str(t/60) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
 
-def detect_partial_match(a,b): 
-    # String, String -> Bool
-    if len(a) == 0 or len(b) < len(a):
+def detect_partial_match(query,model): 
+    # query, model :: String
+    # Returns Bool
+    # Returns True if query is "similar" to model and False otherwise
+    # The spirit of this function is not to guaruntee any specific definition of "similar", and in fact the way I currently have it detecting similarity is very rudimentary and should absolutely be improved.
+    if len(query) == 0 or len(query) > len(model):
         return False
     else:
-        for i in range(len(a)):
-            if a[i] != b[i]:
+        for i in range(len(query)):
+            if query[i] != model[i]:
                 return False
         return True
 
@@ -42,6 +47,7 @@ def sorted_insert(list, new_element, comparison_function):
     # list :: [t]
     # new_element :: [t]
     # comparison_function :: t, t -> Bool
+    # Goes through list and inserts new_element in the first position i such that comparison_function(list,new_element[i]) returns True
     i = 0
     len_list = len(list)
     while(True):
@@ -53,12 +59,16 @@ def sorted_insert(list, new_element, comparison_function):
             return
         i += 1
 
-def slos(los): # show list of speaches
+def slos(los):
+    # los :: [Speach]
+    # Displays los
+    # Please don't use this in any other functions. It's tool to make debugging easier, and it really shouldn't be used beyond that
     for s in los:
         print(s.get_speaker().get_name() + ('(R)' if s.IS_RESPONSE else ''))
     
 def _audit_global_functions():
-    
+    # Returns Void
+    # Does some tests
     lst = [1,2,3,5]
     sorted_insert(lst, 4, comparison_function=lambda x,y: x < y)
     assert(lst==[1,2,3,4,5])
@@ -75,7 +85,7 @@ def _audit_global_functions():
     sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
     assert(lst==[5,4,3,2,1])
 
-_audit_global_functions()
+#_audit_global_functions()
 
 class Speaker: 
     # Constructors
@@ -89,6 +99,11 @@ class Speaker:
         return self.__name
 
     def name_is(self, query, matching_function=(lambda query, actual_uppercase_name: query.uppercase() == actual_uppercase_name)):
+        # query :: String
+        # matching_function :: String, String -> Bool
+        # Returns Bool
+        # Returns True if the Speaker's name is the same or similar to query
+        # The definition of "the same or similar" is given by matching_function 
         return matching_function(query, self.get_name())
     
     def get_total_speaking_time(self):
@@ -148,11 +163,9 @@ class Discussion:
     def get_current_speach(self):
         return self.__current_speach
 
-    def get_upcoming_speaches(self): # how_many: False or Int>0
-        # Returns how_many of the upcoming speaches in order
-        # If how_many=False or if how_many is greater than the number of upcoming speaches, then it returns all of the upcoming speaches
-        # If remove_whats_been_taken=True, then all the speaches returned by this function will be removed from the list of upcoming speaches. Use this option carefully and sparingly!
-        
+    def get_upcoming_speaches(self):
+        # Returns [Speaker]
+        # Gives a list of the upcoming speakers in the order that they will be speaking
         if self.get_priority_mode() == 2:
             def add_element(elem, lst):
                 sorted_insert(lst, elem, (lambda s1,s2: s1.get_speaker().get_total_speaking_time() < s2.get_speaker().get_total_speaking_time()))
@@ -193,7 +206,8 @@ class Discussion:
     def get_priority_mode(self):
         return self.__priority_mode
 
-    def find_speaker(self, name, matching_function=(lambda a,b: a==b)): # name: String, matching_function: Function (String String -> Bool)
+    def find_speaker(self, name, matching_function=(lambda a,b: a==b)): 
+        # String, (String String -> Bool) -> Speaker
         # Searches through the speakers currently listed to find one matching name where a "match" is defined by matching_function
         # Matching function should take two strings and return True if the strings match and False otherwise
         # It should be noted that matching_function is not necessarily commutative, and it is specifically asking if the first argument matches the second one (rather than asking if the second argument matches the first one). This is a subtle distinction but just keep in mind the way the matching_function is used. The first argument passed is our search and the second argument is the alledged actual name we are looking for. In other words, the first argument may be incomplete, or it may have typoes, or whatever other things I or someone else wants to impliment. The second argument is the flawless platonic ideal
@@ -204,6 +218,9 @@ class Discussion:
     
     # Setters
     def add_speach(self, speaker_name, is_response):
+        # speaker_name :: String
+        # is_response :: Bool
+        # Adds a new speach to the upcoming speaches
         speaker = self.find_speaker(speaker_name)
         if speaker == False:
             speaker = Speaker(speaker_name)
@@ -215,6 +232,9 @@ class Discussion:
             self.__number_of_upcoming_new_points += 1
 
     def goto_next_speach(self):
+        # Returns Void
+        # Makes the next speach scheduled the current speach (and shifts everything else around accordingly)
+        # If there are no more scheduled speaches after the current one, then it does nothing
         upcoming_speaches = self.get_upcoming_speaches()
         if upcoming_speaches != []:
             self.__past_speaches.append(self.__current_speach)
@@ -226,6 +246,9 @@ class Discussion:
                 self.__number_of_upcoming_new_points -= 1
 
     def goto_previous_speach(self):
+        # Returns Void
+        # Puts the most recent previous speach as the current one (and shifts everything else around accordingly)
+        # If the current speach is the first speach, then it does nothing
         if self.__past_speaches != []:
             if self.__current_speach.IS_RESPONSE:
                 self.__number_of_upcoming_responses += 1
@@ -236,6 +259,8 @@ class Discussion:
             self.__past_speaches = self.__past_speaches[:-1]
 
     def tick_clock(self):
+        # Returns Void
+        # Tells the object that one second has gone by
         self.__duration += 1
         self.get_current_speach()._tick_speach_time()
 
