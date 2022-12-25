@@ -80,9 +80,9 @@ _audit_global_functions()
 class Speaker: 
     # Constructors
     def __init__(self, name):
-        self.__name = name.upper()
-        self.__total_speaking_time = 0
-        self.__number_of_speaches_given = 0
+        self.__name = name.upper() # String
+        self.__total_speaking_time = 0 # Int
+        self.__number_of_speaches_given = 0 # Int
 
     # Getters
     def get_name(self):
@@ -148,7 +148,7 @@ class Discussion:
     def get_current_speach(self):
         return self.__current_speach
 
-    def take_upcoming_speaches(self, how_many=False, remove_whats_been_taken=False): # how_many: False or Int>0
+    def get_upcoming_speaches(self): # how_many: False or Int>0
         # Returns how_many of the upcoming speaches in order
         # If how_many=False or if how_many is greater than the number of upcoming speaches, then it returns all of the upcoming speaches
         # If remove_whats_been_taken=True, then all the speaches returned by this function will be removed from the list of upcoming speaches. Use this option carefully and sparingly!
@@ -160,31 +160,19 @@ class Discussion:
             def add_element(elem, lst):
                 lst.append(elem)
 
-        if how_many == False:
-            number_of_responses_remaining = self.get_number_of_upcoming_responses()
-            number_of_new_points_remaining = self.get_number_of_upcoming_new_points()
-        else:
-            number_of_responses_remaining = min(self.get_number_of_upcoming_responses(), how_many)
-            number_of_new_points_remaining = min(self.get_number_of_upcoming_new_points(), how_many-number_of_responses_remaining)
+        number_of_responses_remaining = self.get_number_of_upcoming_responses()
+        number_of_new_points_remaining = self.get_number_of_upcoming_new_points()
         responses = []
         new_points = []
-        if remove_whats_been_taken:
-            untaken = []
         for speach in self.__upcoming_speaches:
             if speach.IS_RESPONSE:
                 if number_of_responses_remaining > 0:
                     add_element(speach,responses)
                     number_of_responses_remaining -= 1
-                elif remove_whats_been_taken:
-                    untaken.append(speach)
             else:
                 if number_of_new_points_remaining > 0:
                     add_element(speach,new_points)
                     number_of_new_points_remaining -= 1
-                elif remove_whats_been_taken:
-                    untaken.append(speach)
-        if remove_whats_been_taken:
-            self.__upcoming_speaches = untaken
         return responses+new_points
     
     def get_number_of_upcoming_new_points(self):
@@ -227,10 +215,11 @@ class Discussion:
             self.__number_of_upcoming_new_points += 1
 
     def goto_next_speach(self):
-        upcoming_speaches = self.take_upcoming_speaches(how_many=1, remove_whats_been_taken=True)
+        upcoming_speaches = self.get_upcoming_speaches()
         if upcoming_speaches != []:
             self.__past_speaches.append(self.__current_speach)
             self.__current_speach = upcoming_speaches[0]
+            self.__upcoming_speaches.remove(self.__current_speach)
             if self.__current_speach.IS_RESPONSE:
                 self.__number_of_upcoming_responses -= 1
             else:
@@ -253,11 +242,6 @@ class Discussion:
     # Pseudoprivate
     def _audit(self):
         pass
-
-discussion = Discussion(mover=Speaker('Cici'))
-discussion.add_speach('Evan',is_response=False)
-discussion.add_speach('Cici',is_response=False)
-discussion.add_speach('Grace',is_response=False)
 
 def main(stdscr):
 
@@ -345,7 +329,7 @@ def main(stdscr):
             # nhlt - turn off highlight
             # endl - put a '\n' at the end of the line
             # nendl - don't put a '\n' at the end of the line
-            speaking_order = discussion.get_past_speaches()[-3:] + ['hlt', discussion.get_current_speach(), 'nhlt'] + discussion.take_upcoming_speaches(how_many=SPEAKERS_HEIGHT-number_of_past_speaches_displayed-1) # [Speach or 'highlight' or 'nonl']
+            speaking_order = discussion.get_past_speaches()[-3:] + ['hlt', discussion.get_current_speach(), 'nhlt'] + discussion.get_upcoming_speaches()[:SPEAKERS_HEIGHT-number_of_past_speaches_displayed-1] # [Speach or 'highlight' or 'nonl']
             speaking_order.insert(-1,'nendl')
 
             highlight = False
@@ -423,7 +407,7 @@ def main(stdscr):
         while(True):
             
             current_time =  math.trunc(time.time())
-                
+            
             if current_time > most_recent_recorded_time:
                 discussion.tick_clock() 
                 update_speakers_box()
@@ -508,5 +492,5 @@ def main(stdscr):
                     mode = 0
 
 
-#discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
-#curses.wrapper(main)
+discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
+curses.wrapper(main)
