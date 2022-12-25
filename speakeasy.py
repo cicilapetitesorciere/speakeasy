@@ -352,7 +352,7 @@ def main(stdscr):
                 box.addch(curses.ACS_RARROW if highlight else ' ')
                 for ch in header:
                     box.addch(ch)
-                box.addstr(speaker_name, curses.A_BOLD if highlight else 0)
+                box.addstr(speaker_name, curses.A_BOLD if highlight else curses.A_DIM)
                 for x in range(len(header) + len(speaker_name) + 2, APP_WIDTH-len(speaker_time)-2):
                     box.addch('.')
                 box.addstr(speaker_time)
