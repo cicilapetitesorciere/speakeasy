@@ -21,6 +21,12 @@ import sys
 #  Add Speaker: Nam_
 #               Naman
 
+# Settings
+do_hints = True
+priority_mode = 2
+debug_mode = False
+python_version = sys.version[0]
+
 ###############################
 # Let's define some things :) #
 ###############################
@@ -66,27 +72,6 @@ def slos(los):
     # Please don't use this in any other functions. It's tool to make debugging easier, and it really shouldn't be used beyond that
     for s in los:
         print(s.get_speaker().get_name() + ('(R)' if s.IS_RESPONSE else ''))
-    
-def _test_global_functions():
-    # Returns Void
-    # Does some tests
-    lst = [1,2,3,5]
-    sorted_insert(lst, 4, comparison_function=lambda x,y: x < y)
-    assert(lst==[1,2,3,4,5])
-
-    lst = [1,2,3,5]
-    sorted_insert(lst, 200, comparison_function=lambda x,y: x < y)
-    assert(lst==[1,2,3,5,200])
-
-    lst = [1,2,3,5]
-    sorted_insert(lst, -200, comparison_function=lambda x,y: x < y)
-    assert(lst==[-200, 1,2,3,5])
-
-    lst = [5,4,2,1]
-    sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
-    assert(lst==[5,4,3,2,1])
-
-_test_global_functions()
 
 class Speaker: 
     # Constructors
@@ -289,6 +274,7 @@ class Discussion:
             actual_duration += speach.get_duration()
         
         assert(actual_duration == self.__duration)
+    pass
 
 def main(stdscr):
 
@@ -299,8 +285,8 @@ def main(stdscr):
     #    pass
 
     global discussion
-    do_hints = True
-    prioritize_shy_speakers = True
+    global priority_mode
+    global do_hints
 
     while(True): # There's technically a loop here, but it's very likely that its contents will only be executed once.  
 
@@ -312,22 +298,23 @@ def main(stdscr):
         SUBPROMPT_HEIGHT = 1
         APP_HEIGHT = SPEAKERS_HEIGHT+1+CLOCK_HEIGHT+1+PROMPT_HEIGHT+SUBPROMPT_HEIGHT
 
+        APP_X_POS = math.trunc((curses.COLS-APP_WIDTH)/2)
+
+        APP_Y_POS = math.trunc((curses.LINES-APP_HEIGHT)/2)
+        SPEAKERS_Y_POS = 0
+        CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
+        PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
+        SUBPROMPT_Y_POS = PROMPT_Y_POS + PROMPT_HEIGHT
+
+        # If the window is too small
         if curses.COLS <= APP_WIDTH or curses.LINES <= APP_HEIGHT:
             stdscr.clear()
             stdscr.addstr('Window too small')
             stdscr.refresh()
             stdscr.getch()
-            
+
+        # If the window is the right size    
         else:
-
-            APP_X_POS = math.trunc((curses.COLS-APP_WIDTH)/2)
-
-            APP_Y_POS = math.trunc((curses.LINES-APP_HEIGHT)/2)
-            SPEAKERS_Y_POS = 0
-            CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
-            PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
-            SUBPROMPT_Y_POS = PROMPT_Y_POS + PROMPT_HEIGHT
-
             stdscr.clear()
             stdscr.addch(APP_Y_POS-1,APP_X_POS-1, curses.ACS_ULCORNER)
             stdscr.addch(APP_Y_POS-1,APP_X_POS+APP_WIDTH, curses.ACS_URCORNER)
@@ -460,8 +447,9 @@ def main(stdscr):
             most_recent_recorded_time = math.trunc(time.time())
 
             while(True):
-
-                discussion._audit()
+                
+                if debug_mode:
+                    discussion._audit()
                 
                 current_time =  math.trunc(time.time())
                 
@@ -558,10 +546,73 @@ def main(stdscr):
                         input_win.refresh()
                         mode = 0
 
-if sys.version[0] == '2':
-    discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
-elif sys.version[0] == '3':
-    discussion = Discussion(mover=Speaker(input('Who moved the motion? ')))
+# Run Tests
+if debug_mode:
+    # Returns Void
+    # Does some tests
+    lst = [1,2,3,5]
+    sorted_insert(lst, 4, comparison_function=lambda x,y: x < y)
+    assert(lst==[1,2,3,4,5])
+
+    lst = [1,2,3,5]
+    sorted_insert(lst, 200, comparison_function=lambda x,y: x < y)
+    assert(lst==[1,2,3,5,200])
+
+    lst = [1,2,3,5]
+    sorted_insert(lst, -200, comparison_function=lambda x,y: x < y)
+    assert(lst==[-200, 1,2,3,5])
+
+    lst = [5,4,2,1]
+    sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
+    assert(lst==[5,4,3,2,1])
+
+# Read flags
+i = 1
+try:
+    while(True):
+        if sys.argv[i] != '' and sys.argv[i][0] == '-':
+            if len(sys.argv[i]) >= 2 and sys.argv[i][1] == '-':
+                if sys.argv[i] == '--python-version':
+                    i += 1
+                    try:
+                        python_version = sys.argv[i]
+                    except IndexError:
+                        print('option requires an argument: --python-version')
+                        exit()
+                else:
+                    print('no option ' + sys.argv[i])
+                    exit()
+            
+            else:
+                for c in sys.argv[i]:
+                    if c == 'H':
+                        do_hints = True
+                    elif c == 'N':
+                        do_hints = False
+                    elif c == '2':
+                        python_version = 2
+                    elif c == '3':
+                        python_version = 3
+                    elif c == 'd':
+                        debug_mode = True
+                    else:
+                        print('no option -' + c)
+
+        i += 1
+except IndexError:
+    pass
+
+# Starts the program for real
+if python_version == '2':
+    if debug_mode:
+        discussion = Discussion(mover=Speaker('Debugger'))
+    else:
+        discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
+elif python_version == '3':
+    if debug_mode:
+        discussion = Discussion(mover=Speaker('Debugger'))
+    else:
+        discussion = Discussion(mover=Speaker(input('Who moved the motion? ')))
 else:
     print('Python version not recognized')
     exit()
