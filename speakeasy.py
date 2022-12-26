@@ -85,7 +85,7 @@ def _test_global_functions():
     sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
     assert(lst==[5,4,3,2,1])
 
-#_audit_global_functions()
+_test_global_functions()
 
 class Speaker: 
     # Constructors
@@ -304,250 +304,258 @@ def main(stdscr):
     while(True):
 
         APP_WIDTH = 50
-        APP_X_POS = (curses.COLS-APP_WIDTH)/2
-        APP_Y_POS = 10
 
         SPEAKERS_HEIGHT = 30
-        SPEAKERS_Y_POS = 0
-        
         CLOCK_HEIGHT = 1
-        CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
-        
         PROMPT_HEIGHT = 1
-        PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
-
         SUBPROMPT_HEIGHT = 1
-        SUBPROMPT_Y_POS = PROMPT_Y_POS + PROMPT_HEIGHT
+        APP_HEIGHT = SPEAKERS_HEIGHT+1+CLOCK_HEIGHT+1+PROMPT_HEIGHT+SUBPROMPT_HEIGHT
 
-        stdscr.clear()
-        stdscr.addch(APP_Y_POS-1,APP_X_POS-1, curses.ACS_ULCORNER)
-        stdscr.addch(APP_Y_POS-1,APP_X_POS+APP_WIDTH, curses.ACS_URCORNER)
-        stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,APP_X_POS-1, curses.ACS_LTEE)
-        stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,APP_X_POS+APP_WIDTH, curses.ACS_RTEE)
-        stdscr.addch(APP_Y_POS+CLOCK_Y_POS, APP_X_POS-1, curses.ACS_VLINE)
-        stdscr.addch(APP_Y_POS+CLOCK_Y_POS, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
-        stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, APP_X_POS-1, curses.ACS_LLCORNER)
-        stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, APP_X_POS+APP_WIDTH, curses.ACS_LRCORNER)
-        for x in range(APP_X_POS,APP_X_POS+APP_WIDTH):
-            stdscr.addch(APP_Y_POS-1,x, curses.ACS_HLINE)
-            stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,x, curses.ACS_HLINE)
-            stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, x, curses.ACS_HLINE)
-        for y in range(APP_Y_POS, APP_Y_POS+SPEAKERS_HEIGHT):
-            stdscr.addch(y, APP_X_POS-1, curses.ACS_VLINE)
-            stdscr.addch(y, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
-
-        if do_hints:
-            stdscr.addstr(APP_Y_POS+0,APP_X_POS+APP_WIDTH+2,'C-n Go to next speaker')
-            stdscr.addstr(APP_Y_POS+1,APP_X_POS+APP_WIDTH+2,'C-b Go to previous speaker')
-            stdscr.addstr(APP_Y_POS+2,APP_X_POS+APP_WIDTH+2,'C-p Pause the clock')
-            stdscr.addstr(APP_Y_POS+2,APP_X_POS+APP_WIDTH+2,'C-h Toggle Hints')
-            stdscr.addstr(APP_Y_POS+3,APP_X_POS+APP_WIDTH+2,'C-r Re-render')
-            stdscr.addstr(APP_Y_POS+4,APP_X_POS+APP_WIDTH+2,'C-d Exit')
-
-        #stdscr.addstr(0,0, str(Speach.get_total_number_of_speaches()))
-        
-        stdscr.refresh()
-        
-        speakers_box = curses.newwin(SPEAKERS_HEIGHT, APP_WIDTH, APP_Y_POS+SPEAKERS_Y_POS, APP_X_POS)
-        def update_speakers_box():
-
-            def add_speaker(header, speach, do_newline=True, box=speakers_box, highlight=False):
-                speaker_name = speach.get_speaker().get_name().capitalize()
-                speaker_time = format_time(speach.get_duration()) + ' / ' + format_time(speach.get_speaker().get_total_speaking_time())
-                box.addch(curses.ACS_RARROW if highlight else ' ')
-                for ch in header:
-                    box.addch(ch)
-                box.addstr(speaker_name, curses.A_BOLD if highlight else curses.A_DIM)
-                for x in range(len(header) + len(speaker_name) + 2, APP_WIDTH-len(speaker_time)-2):
-                    box.addch('.')
-                box.addstr(speaker_time)
-                box.addch(' ')
-                box.addch(curses.ACS_LARROW if highlight else ' ')
-                if do_newline:
-                    box.addch('\n')
-
-            speakers_box.clear()
-
-            number_of_past_speaches_displayed = min(3,len(discussion.get_past_speaches()))
+        if curses.COLS <= APP_WIDTH or curses.LINES <= APP_HEIGHT:
+            stdscr.clear()
+            stdscr.addstr('Window too small')
+            stdscr.refresh()
+            stdscr.getch()
             
-            # This requires a bit of explanation, because it's a little more than just the straight speaking order. I've also allowed for some flags which affect properties of any speach that comes after
-            # hlt - turns on highlight
-            # nhlt - turn off highlight
-            # endl - put a '\n' at the end of the line
-            # nendl - don't put a '\n' at the end of the line
-            speaking_order = discussion.get_past_speaches()[-3:] + ['hlt', discussion.get_current_speach(), 'nhlt'] + discussion.get_upcoming_speaches()[:SPEAKERS_HEIGHT-number_of_past_speaches_displayed-1] # [Speach or 'highlight' or 'nonl']
-            speaking_order.insert(-1,'nendl')
+        else:
 
-            highlight = False
-            do_newline = True
-            # n = max(0, len(discussion.get_past_speaches())-3)
-            for i in range(len(speaking_order)):
-                if type(speaking_order[i]) == str:
-                    if speaking_order[i] == 'hlt':
-                        highlight = True
-                    elif speaking_order[i] == 'nhlt':
-                        highlight = False
-                    elif speaking_order[i] == 'endl':
-                        do_newline = True
-                    elif speaking_order[i] == 'nendl':
-                        do_newline = False
-                else:
-                    if speaking_order[i].IS_RESPONSE:
-                        header = [' ']
-                        if False: #i+1 < len(speaking_order) and speaking_order[i+1].IS_RESPONSE:
-                            header += [curses.ACS_LTEE]
-                        else:
-                            header += [curses.ACS_LLCORNER]
+            APP_X_POS = (curses.COLS-APP_WIDTH)/2
+
+            APP_Y_POS = (curses.LINES-APP_HEIGHT)/2
+            SPEAKERS_Y_POS = 0
+            CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
+            PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
+            SUBPROMPT_Y_POS = PROMPT_Y_POS + PROMPT_HEIGHT
+
+            stdscr.clear()
+            stdscr.addch(APP_Y_POS-1,APP_X_POS-1, curses.ACS_ULCORNER)
+            stdscr.addch(APP_Y_POS-1,APP_X_POS+APP_WIDTH, curses.ACS_URCORNER)
+            stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,APP_X_POS-1, curses.ACS_LTEE)
+            stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,APP_X_POS+APP_WIDTH, curses.ACS_RTEE)
+            stdscr.addch(APP_Y_POS+CLOCK_Y_POS, APP_X_POS-1, curses.ACS_VLINE)
+            stdscr.addch(APP_Y_POS+CLOCK_Y_POS, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
+            stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, APP_X_POS-1, curses.ACS_LLCORNER)
+            stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, APP_X_POS+APP_WIDTH, curses.ACS_LRCORNER)
+            for x in range(APP_X_POS,APP_X_POS+APP_WIDTH):
+                stdscr.addch(APP_Y_POS-1,x, curses.ACS_HLINE)
+                stdscr.addch(APP_Y_POS+SPEAKERS_Y_POS+SPEAKERS_HEIGHT,x, curses.ACS_HLINE)
+                stdscr.addch(APP_Y_POS+CLOCK_Y_POS+CLOCK_HEIGHT, x, curses.ACS_HLINE)
+            for y in range(APP_Y_POS, APP_Y_POS+SPEAKERS_HEIGHT):
+                stdscr.addch(y, APP_X_POS-1, curses.ACS_VLINE)
+                stdscr.addch(y, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
+
+            if do_hints:
+                stdscr.addstr(APP_Y_POS+0,APP_X_POS+APP_WIDTH+2,'C-n Go to next speaker')
+                stdscr.addstr(APP_Y_POS+1,APP_X_POS+APP_WIDTH+2,'C-b Go to previous speaker')
+                stdscr.addstr(APP_Y_POS+2,APP_X_POS+APP_WIDTH+2,'C-p Pause the clock')
+                stdscr.addstr(APP_Y_POS+2,APP_X_POS+APP_WIDTH+2,'C-h Toggle Hints')
+                stdscr.addstr(APP_Y_POS+3,APP_X_POS+APP_WIDTH+2,'C-r Re-render')
+                stdscr.addstr(APP_Y_POS+4,APP_X_POS+APP_WIDTH+2,'C-d Exit')
+
+            #stdscr.addstr(0,0, str(Speach.get_total_number_of_speaches()))
+            
+            stdscr.refresh()
+            
+            speakers_box = curses.newwin(SPEAKERS_HEIGHT, APP_WIDTH, APP_Y_POS+SPEAKERS_Y_POS, APP_X_POS)
+            def update_speakers_box():
+
+                def add_speaker(header, speach, do_newline=True, box=speakers_box, highlight=False):
+                    speaker_name = speach.get_speaker().get_name().capitalize()
+                    speaker_time = format_time(speach.get_duration()) + ' / ' + format_time(speach.get_speaker().get_total_speaking_time())
+                    box.addch(curses.ACS_RARROW if highlight else ' ')
+                    for ch in header:
+                        box.addch(ch)
+                    box.addstr(speaker_name, curses.A_BOLD if highlight else curses.A_DIM)
+                    for x in range(len(header) + len(speaker_name) + 2, APP_WIDTH-len(speaker_time)-2):
+                        box.addch('.')
+                    box.addstr(speaker_time)
+                    box.addch(' ')
+                    box.addch(curses.ACS_LARROW if highlight else ' ')
+                    if do_newline:
+                        box.addch('\n')
+
+                speakers_box.clear()
+
+                number_of_past_speaches_displayed = min(3,len(discussion.get_past_speaches()))
+                
+                # This requires a bit of explanation, because it's a little more than just the straight speaking order. I've also allowed for some flags which affect properties of any speach that comes after
+                # hlt - turns on highlight
+                # nhlt - turn off highlight
+                # endl - put a '\n' at the end of the line
+                # nendl - don't put a '\n' at the end of the line
+                speaking_order = discussion.get_past_speaches()[-3:] + ['hlt', discussion.get_current_speach(), 'nhlt'] + discussion.get_upcoming_speaches()[:SPEAKERS_HEIGHT-number_of_past_speaches_displayed-1] # [Speach or 'highlight' or 'nonl']
+                speaking_order.insert(-1,'nendl')
+
+                highlight = False
+                do_newline = True
+                # n = max(0, len(discussion.get_past_speaches())-3)
+                for i in range(len(speaking_order)):
+                    if type(speaking_order[i]) == str:
+                        if speaking_order[i] == 'hlt':
+                            highlight = True
+                        elif speaking_order[i] == 'nhlt':
+                            highlight = False
+                        elif speaking_order[i] == 'endl':
+                            do_newline = True
+                        elif speaking_order[i] == 'nendl':
+                            do_newline = False
                     else:
-                        header = ' ' # + str(n) + '. '
-                        # n += 1
-                    add_speaker(header, speaking_order[i], do_newline=do_newline, highlight=highlight)
+                        if speaking_order[i].IS_RESPONSE:
+                            header = [' ']
+                            if False: #i+1 < len(speaking_order) and speaking_order[i+1].IS_RESPONSE:
+                                header += [curses.ACS_LTEE]
+                            else:
+                                header += [curses.ACS_LLCORNER]
+                        else:
+                            header = ' ' # + str(n) + '. '
+                            # n += 1
+                        add_speaker(header, speaking_order[i], do_newline=do_newline, highlight=highlight)
 
-            speakers_box.refresh()
+                speakers_box.refresh()
 
-        update_speakers_box()
-        
-        CLOCK_LABEL_TEXT = 'Total Time Elapsed: '
-        CLOCK_LABEL_WIDTH = len(CLOCK_LABEL_TEXT)
-        clock_label = curses.newwin(CLOCK_HEIGHT, CLOCK_LABEL_WIDTH+1, APP_Y_POS+CLOCK_Y_POS, APP_X_POS)
-        clock_label.addstr(CLOCK_LABEL_TEXT, curses.A_BOLD)
-        clock_label.refresh()
-
-        PROMPT_TEXT = 'Add Speaker: '
-        PROMPT_WIDTH = len(PROMPT_TEXT)
-        prompt_win = curses.newwin(PROMPT_HEIGHT, PROMPT_WIDTH+1, APP_Y_POS+PROMPT_Y_POS, APP_X_POS)
-        prompt_win.addstr(PROMPT_TEXT)
-        prompt_win.refresh()
-
-        #INPUT_CURSOR = '_'
-        input_win = curses.newwin(PROMPT_HEIGHT, APP_WIDTH-PROMPT_WIDTH, APP_Y_POS+PROMPT_Y_POS, APP_X_POS+PROMPT_WIDTH)
-        #input_win.addch(INPUT_CURSOR)
-
-        subprompt_win = curses.newwin(SUBPROMPT_HEIGHT, APP_WIDTH, APP_Y_POS+SUBPROMPT_Y_POS, APP_X_POS)
-
-        clock_face = curses.newwin(CLOCK_HEIGHT, APP_WIDTH-CLOCK_LABEL_WIDTH, APP_Y_POS+CLOCK_Y_POS, APP_X_POS+CLOCK_LABEL_WIDTH)
-        def update_clock():
-            clock_face.clear()
-            clock_face.addstr(format_time(discussion.get_duration()))
-            clock_face.refresh()
-            input_win.refresh()
-        update_clock()
-
-        input_content = ''
-        autocomplete_guess = ''
-        def subprompt_autocomplete():
-            speaker_guess = discussion.find_speaker(input_content, matching_function=detect_partial_match)
-            subprompt_win.clear()
-            if speaker_guess == False:
-                autocomplete_guess = ''
-            else:
-                autocomplete_guess = speaker_guess.get_name().capitalize()
-                subprompt_win.addstr(0, PROMPT_WIDTH, autocomplete_guess)
-            subprompt_win.refresh()
-            return autocomplete_guess
-
-        mode = 0
-        input_win.nodelay(True)
-        most_recent_recorded_time = math.trunc(time.time())
-
-        while(True):
-
-            discussion._audit()
+            update_speakers_box()
             
-            current_time =  math.trunc(time.time())
-            
-            if current_time > most_recent_recorded_time:
-                discussion.tick_clock() 
-                update_speakers_box()
-                update_clock()
-                most_recent_recorded_time = current_time
+            CLOCK_LABEL_TEXT = 'Total Time Elapsed: '
+            CLOCK_LABEL_WIDTH = len(CLOCK_LABEL_TEXT)
+            clock_label = curses.newwin(CLOCK_HEIGHT, CLOCK_LABEL_WIDTH+1, APP_Y_POS+CLOCK_Y_POS, APP_X_POS)
+            clock_label.addstr(CLOCK_LABEL_TEXT, curses.A_BOLD)
+            clock_label.refresh()
 
-            try:
-                key = input_win.getkey()
-                ord(key) # Just making sure that this function works, because for some reason it occasionally gets strings of length 10
-            except:
-                continue
-            
-            if mode == 0:
-                if ord(key) == 127: # Backspace
-                    input_content = input_content[:-1]
-                    autocomplete_guess = subprompt_autocomplete()
-                elif key == ' ' or (ord(key) >= ord('a') and ord(key) <= ord('z')) or (ord(key) >= ord('A') and ord(key) <= ord('Z')) :
-                    if len(input_content) < APP_WIDTH-PROMPT_WIDTH-1:
-                        input_content += key
-                        autocomplete_guess = subprompt_autocomplete()
-                elif ord(key) == 4: # Ctrl-D (Terminate program)
-                    return
-                elif ord(key) == 9: # Tab
-                    input_content = autocomplete_guess
-                elif ord(key) == 10 and input_content != '': # Return
-                    autocomplete_guess = ''
-                    subprompt_win.clear()
-                    subprompt_win.addstr('Type (\'1\', \'2\', or \'!\')?')
-                    subprompt_win.refresh()
-                    mode = 1
-                elif ord(key) == 16: # Ctrl-P (Pause)
-                    subprompt_win.clear()
-                    subprompt_win.addstr('Clock Paused: Press any key to continue...', curses.A_BOLD)
-                    subprompt_win.refresh()
-                    while(True):
-                        try:
-                            input_win.getkey()
-                        except:
-                            continue
-                        subprompt_autocomplete()
-                        break
-                elif ord(key) == 18: # Ctrl-R (Re-render)
-                    break
-                elif ord(key) == 8: # Ctrl-H (Toggle Hints)
-                    do_hints = not do_hints
-                    break
-                elif ord(key) == 14: # Ctrl-N (Next)
-                    discussion.goto_next_speach()
-                    update_speakers_box()
-                elif ord(key) == 2: # Ctrl-B (Go back to previous speach)
-                    discussion.goto_previous_speach()
-                    update_speakers_box()
-                else:
-                    subprompt_win.clear()
-                    subprompt_win.addstr(str(ord(key)))
-                    subprompt_win.refresh()
-                
-                subprompt_win.clear()
-                
-                input_win.clear()
-                input_win.addstr(input_content)
-                #input_win.addch(INPUT_CURSOR)
+            PROMPT_TEXT = 'Add Speaker: '
+            PROMPT_WIDTH = len(PROMPT_TEXT)
+            prompt_win = curses.newwin(PROMPT_HEIGHT, PROMPT_WIDTH+1, APP_Y_POS+PROMPT_Y_POS, APP_X_POS)
+            prompt_win.addstr(PROMPT_TEXT)
+            prompt_win.refresh()
+
+            #INPUT_CURSOR = '_'
+            input_win = curses.newwin(PROMPT_HEIGHT, APP_WIDTH-PROMPT_WIDTH, APP_Y_POS+PROMPT_Y_POS, APP_X_POS+PROMPT_WIDTH)
+            #input_win.addch(INPUT_CURSOR)
+
+            subprompt_win = curses.newwin(SUBPROMPT_HEIGHT, APP_WIDTH, APP_Y_POS+SUBPROMPT_Y_POS, APP_X_POS)
+
+            clock_face = curses.newwin(CLOCK_HEIGHT, APP_WIDTH-CLOCK_LABEL_WIDTH, APP_Y_POS+CLOCK_Y_POS, APP_X_POS+CLOCK_LABEL_WIDTH)
+            def update_clock():
+                clock_face.clear()
+                clock_face.addstr(format_time(discussion.get_duration()))
+                clock_face.refresh()
                 input_win.refresh()
+            update_clock()
 
-            elif mode == 1:
-                if key == '1' or key == '2':
-                    discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
-                    update_speakers_box()
-                    subprompt_win.clear()
-                    subprompt_win.refresh()
-                    input_content = ''
-                    input_win.clear()
-                    input_win.refresh()
-                    mode = 0
+            input_content = ''
+            autocomplete_guess = ''
+            def subprompt_autocomplete():
+                speaker_guess = discussion.find_speaker(input_content, matching_function=detect_partial_match)
+                subprompt_win.clear()
+                if speaker_guess == False:
+                    autocomplete_guess = ''
+                else:
+                    autocomplete_guess = speaker_guess.get_name().capitalize()
+                    subprompt_win.addstr(0, PROMPT_WIDTH, autocomplete_guess)
+                subprompt_win.refresh()
+                return autocomplete_guess
+
+            mode = 0
+            input_win.nodelay(True)
+            most_recent_recorded_time = math.trunc(time.time())
+
+            while(True):
+
+                discussion._audit()
                 
-                if key == '!':
-                    discussion.add_speach(speaker_name=input_content, is_response=discussion.get_current_speach().IS_RESPONSE, force_now=True)
+                current_time =  math.trunc(time.time())
+                
+                if current_time > most_recent_recorded_time:
+                    discussion.tick_clock() 
                     update_speakers_box()
-                    subprompt_win.clear()
-                    subprompt_win.refresh()
-                    input_content = ''
-                    input_win.clear()
-                    input_win.refresh()
-                    mode = 0
+                    update_clock()
+                    most_recent_recorded_time = current_time
+
+                try:
+                    key = input_win.getkey()
+                    ord(key) # Just making sure that this function works, because for some reason it occasionally gets strings of length 10
+                except:
+                    continue
+                
+                if mode == 0:
+                    if ord(key) == 127: # Backspace
+                        input_content = input_content[:-1]
+                        autocomplete_guess = subprompt_autocomplete()
+                    elif key == ' ' or (ord(key) >= ord('a') and ord(key) <= ord('z')) or (ord(key) >= ord('A') and ord(key) <= ord('Z')) :
+                        if len(input_content) < APP_WIDTH-PROMPT_WIDTH-1:
+                            input_content += key
+                            autocomplete_guess = subprompt_autocomplete()
+                    elif ord(key) == 4: # Ctrl-D (Terminate program)
+                        return
+                    elif ord(key) == 9: # Tab
+                        input_content = autocomplete_guess
+                    elif ord(key) == 10 and input_content != '': # Return
+                        autocomplete_guess = ''
+                        subprompt_win.clear()
+                        subprompt_win.addstr('Type (\'1\', \'2\', or \'!\')?')
+                        subprompt_win.refresh()
+                        mode = 1
+                    elif ord(key) == 16: # Ctrl-P (Pause)
+                        subprompt_win.clear()
+                        subprompt_win.addstr('Clock Paused: Press any key to continue...', curses.A_BOLD)
+                        subprompt_win.refresh()
+                        while(True):
+                            try:
+                                input_win.getkey()
+                            except:
+                                continue
+                            subprompt_autocomplete()
+                            break
+                    elif ord(key) == 18: # Ctrl-R (Re-render)
+                        break
+                    elif ord(key) == 8: # Ctrl-H (Toggle Hints)
+                        do_hints = not do_hints
+                        break
+                    elif ord(key) == 14: # Ctrl-N (Next)
+                        discussion.goto_next_speach()
+                        update_speakers_box()
+                    elif ord(key) == 2: # Ctrl-B (Go back to previous speach)
+                        discussion.goto_previous_speach()
+                        update_speakers_box()
+                    else:
+                        subprompt_win.clear()
+                        subprompt_win.addstr(str(ord(key)))
+                        subprompt_win.refresh()
                     
-                elif ord(key) == 27: # Escape
                     subprompt_win.clear()
-                    subprompt_win.refresh()
-                    input_content = ''
+                    
                     input_win.clear()
+                    input_win.addstr(input_content)
+                    #input_win.addch(INPUT_CURSOR)
                     input_win.refresh()
-                    mode = 0
+
+                elif mode == 1:
+                    if key == '1' or key == '2':
+                        discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
+                        update_speakers_box()
+                        subprompt_win.clear()
+                        subprompt_win.refresh()
+                        input_content = ''
+                        input_win.clear()
+                        input_win.refresh()
+                        mode = 0
+                    
+                    if key == '!':
+                        discussion.add_speach(speaker_name=input_content, is_response=discussion.get_current_speach().IS_RESPONSE, force_now=True)
+                        update_speakers_box()
+                        subprompt_win.clear()
+                        subprompt_win.refresh()
+                        input_content = ''
+                        input_win.clear()
+                        input_win.refresh()
+                        mode = 0
+                        
+                    elif ord(key) == 27: # Escape
+                        subprompt_win.clear()
+                        subprompt_win.refresh()
+                        input_content = ''
+                        input_win.clear()
+                        input_win.refresh()
+                        mode = 0
 
 discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
 curses.wrapper(main)
