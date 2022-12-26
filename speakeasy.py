@@ -28,6 +28,44 @@ priority_mode = 2
 debug_mode = False
 python_version = sys.version[0]
 
+# Read flags
+i = 1
+try:
+    while(True):
+        if sys.argv[i] != '' and sys.argv[i][0] == '-':
+            if len(sys.argv[i]) >= 2 and sys.argv[i][1] == '-':
+                if sys.argv[i] == '--python-version':
+                    i += 1
+                    try:
+                        python_version = sys.argv[i]
+                    except IndexError:
+                        print('option requires an argument: --python-version')
+                        exit()
+                else:
+                    print('no option ' + sys.argv[i])
+                    exit()
+            
+            else:
+                for c in sys.argv[i][1:]:
+                    if c == 'H':
+                        do_hints = True
+                    elif c == 'N':
+                        do_hints = False
+                    elif c == '2':
+                        python_version = 2
+                    elif c == '3':
+                        python_version = 3
+                    elif c == 'd':
+                        debug_mode = True
+                    else:
+                        print('no option -' + c)
+                        exit()
+
+
+        i += 1
+except IndexError:
+    pass
+
 ###############################
 # Let's define some things :) #
 ###############################
@@ -36,7 +74,7 @@ def format_time(t):
     # t :: Int such that t >= 0
     # Returns String
     # Takes some duration t in seconds and returns a string representing that duration in terms of minutes and seconds
-    return (str(math.floor(t/60)) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
+    return (str(math.trunc(t/60)) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
 
 def detect_partial_match(query,model): 
     # query, model :: String
@@ -330,7 +368,6 @@ def main(stdscr):
             for y in range(APP_Y_POS, APP_Y_POS+SPEAKERS_HEIGHT):
                 stdscr.addch(y, APP_X_POS-1, curses.ACS_VLINE)
                 stdscr.addch(y, APP_X_POS+APP_WIDTH, curses.ACS_VLINE)
-
             if do_hints:
                 stdscr.addstr(APP_Y_POS+0,APP_X_POS+APP_WIDTH+2,'C-n Go to next speaker')
                 stdscr.addstr(APP_Y_POS+1,APP_X_POS+APP_WIDTH+2,'C-b Go to previous speaker')
@@ -464,7 +501,6 @@ def main(stdscr):
                 except:
                     continue
                 else:
-                
                     if mode == 0:
                         if ord(key) == 127: # Backspace
                             input_content = input_content[:-1]
@@ -517,7 +553,6 @@ def main(stdscr):
                         input_win.addstr(input_content)
                         #input_win.addch(INPUT_CURSOR)
                         input_win.refresh()
-
                     elif mode == 1:
                         if key == '1' or key == '2':
                             discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
@@ -574,43 +609,15 @@ if debug_mode:
     lst = [5,4,2,1]
     sorted_insert(lst, 3, comparison_function=lambda x,y: x > y)
     assert(lst==[5,4,3,2,1])
-
-# Read flags
-i = 1
-try:
-    while(True):
-        if sys.argv[i] != '' and sys.argv[i][0] == '-':
-            if len(sys.argv[i]) >= 2 and sys.argv[i][1] == '-':
-                if sys.argv[i] == '--python-version':
-                    i += 1
-                    try:
-                        python_version = sys.argv[i]
-                    except IndexError:
-                        print('option requires an argument: --python-version')
-                        exit()
-                else:
-                    print('no option ' + sys.argv[i])
-                    exit()
-            
-            else:
-                for c in sys.argv[i]:
-                    if c == 'H':
-                        do_hints = True
-                    elif c == 'N':
-                        do_hints = False
-                    elif c == '2':
-                        python_version = 2
-                    elif c == '3':
-                        python_version = 3
-                    elif c == 'd':
-                        debug_mode = True
-                    else:
-                        print('no option -' + c)
-
-        i += 1
-except IndexError:
-    pass
-
+    assert(format_time(0) == '0:00')
+    assert(format_time(30) == '0:30')
+    assert(format_time(60) == '1:00')
+    assert(format_time(61) == '1:01')
+    assert(format_time(119) == '1:59')
+    assert(format_time(3600) == '60:00')
+    assert(format_time(3659) == '60:59')
+    assert(format_time(7200) == '120:00')
+    
 # Starts the program for real
 if python_version == '2':
     if debug_mode:
