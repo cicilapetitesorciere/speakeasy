@@ -224,6 +224,12 @@ class Discussion:
             else:
                 self.__number_of_upcoming_new_points += 1
 
+    def undo_add_speach(self):
+        if self.__upcoming_speaches.pop().IS_RESPONSE:
+            self.__number_of_upcoming_responses -= 1
+        else:
+            self.__number_of_upcoming_new_points -= 1
+
     def goto_next_speach(self):
         # Returns Void
         # Makes the next speach scheduled the current speach (and shifts everything else around accordingly)
@@ -464,87 +470,89 @@ def main(stdscr):
                     ord(key) # Just making sure that this function works, because for some reason it occasionally gets strings of length 10
                 except:
                     continue
+                else:
                 
-                if mode == 0:
-                    if ord(key) == 127: # Backspace
-                        input_content = input_content[:-1]
-                        autocomplete_guess = subprompt_autocomplete()
-                    elif key == ' ' or (ord(key) >= ord('a') and ord(key) <= ord('z')) or (ord(key) >= ord('A') and ord(key) <= ord('Z')) :
-                        if len(input_content) < APP_WIDTH-PROMPT_WIDTH-1:
-                            input_content += key
+                    if mode == 0:
+                        if ord(key) == 127: # Backspace
+                            input_content = input_content[:-1]
                             autocomplete_guess = subprompt_autocomplete()
-                    elif ord(key) == 4: # Ctrl-D (Terminate program)
-                        return
-                    elif ord(key) == 9: # Tab
-                        input_content = autocomplete_guess
-                    elif ord(key) == 10 and input_content != '': # Return
-                        autocomplete_guess = ''
-                        subprompt_win.clear()
-                        subprompt_win.addstr('Type (\'1\', \'2\', or \'!\')?')
-                        subprompt_win.refresh()
-                        mode = 1
-                    elif ord(key) == 16: # Ctrl-P (Pause)
-                        subprompt_win.clear()
-                        subprompt_win.addstr('Clock Paused: Press any key to continue...', curses.A_BOLD)
-                        subprompt_win.refresh()
-                        while(True):
-                            try:
-                                input_win.getkey()
-                            except:
-                                continue
-                            subprompt_autocomplete()
+                        elif key == ' ' or (ord(key) >= ord('a') and ord(key) <= ord('z')) or (ord(key) >= ord('A') and ord(key) <= ord('Z')) :
+                            if len(input_content) < APP_WIDTH-PROMPT_WIDTH-1:
+                                input_content += key
+                                autocomplete_guess = subprompt_autocomplete()
+                        elif ord(key) == 4: # Ctrl-D (Terminate program)
+                            return
+                        elif ord(key) == 9: # Tab
+                            input_content = autocomplete_guess
+                        elif ord(key) == 10 and input_content != '': # Return
+                            autocomplete_guess = ''
+                            subprompt_win.clear()
+                            subprompt_win.addstr('Type (\'1\', \'2\', or \'!\')?')
+                            subprompt_win.refresh()
+                            mode = 1
+                        elif ord(key) == 16: # Ctrl-P (Pause)
+                            subprompt_win.clear()
+                            subprompt_win.addstr('Clock Paused: Press any key to continue...', curses.A_BOLD)
+                            subprompt_win.refresh()
+                            while(True):
+                                try:
+                                    input_win.getkey()
+                                except:
+                                    continue
+                                else:
+                                    subprompt_autocomplete()
+                                    break
+                        elif ord(key) == 18: # Ctrl-R (Re-render)
                             break
-                    elif ord(key) == 18: # Ctrl-R (Re-render)
-                        break
-                    elif ord(key) == 8: # Ctrl-H (Toggle Hints)
-                        do_hints = not do_hints
-                        break
-                    elif ord(key) == 14: # Ctrl-N (Next)
-                        discussion.goto_next_speach()
-                        update_speakers_box()
-                    elif ord(key) == 2: # Ctrl-B (Go back to previous speach)
-                        discussion.goto_previous_speach()
-                        update_speakers_box()
-                    else:
-                        subprompt_win.clear()
-                        subprompt_win.addstr(str(ord(key)))
-                        subprompt_win.refresh()
-                    
-                    subprompt_win.clear()
-                    
-                    input_win.clear()
-                    input_win.addstr(input_content)
-                    #input_win.addch(INPUT_CURSOR)
-                    input_win.refresh()
-
-                elif mode == 1:
-                    if key == '1' or key == '2':
-                        discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
-                        update_speakers_box()
-                        subprompt_win.clear()
-                        subprompt_win.refresh()
-                        input_content = ''
-                        input_win.clear()
-                        input_win.refresh()
-                        mode = 0
-                    
-                    if key == '!':
-                        discussion.add_speach(speaker_name=input_content, is_response=discussion.get_current_speach().IS_RESPONSE, force_now=True)
-                        update_speakers_box()
-                        subprompt_win.clear()
-                        subprompt_win.refresh()
-                        input_content = ''
-                        input_win.clear()
-                        input_win.refresh()
-                        mode = 0
+                        elif ord(key) == 8: # Ctrl-H (Toggle Hints)
+                            do_hints = not do_hints
+                            break
+                        elif ord(key) == 14: # Ctrl-N (Next)
+                            discussion.goto_next_speach()
+                            update_speakers_box()
+                        elif ord(key) == 2: # Ctrl-B (Go back to previous speach)
+                            discussion.goto_previous_speach()
+                            update_speakers_box()
+                        else:
+                            subprompt_win.clear()
+                            subprompt_win.addstr(str(ord(key)))
+                            subprompt_win.refresh()
                         
-                    elif ord(key) == 27: # Escape
                         subprompt_win.clear()
-                        subprompt_win.refresh()
-                        input_content = ''
+                        
                         input_win.clear()
+                        input_win.addstr(input_content)
+                        #input_win.addch(INPUT_CURSOR)
                         input_win.refresh()
-                        mode = 0
+
+                    elif mode == 1:
+                        if key == '1' or key == '2':
+                            discussion.add_speach(speaker_name=input_content, is_response=(key=='2'))
+                            update_speakers_box()
+                            subprompt_win.clear()
+                            subprompt_win.refresh()
+                            input_content = ''
+                            input_win.clear()
+                            input_win.refresh()
+                            mode = 0
+                        
+                        if key == '!':
+                            discussion.add_speach(speaker_name=input_content, is_response=discussion.get_current_speach().IS_RESPONSE, force_now=True)
+                            update_speakers_box()
+                            subprompt_win.clear()
+                            subprompt_win.refresh()
+                            input_content = ''
+                            input_win.clear()
+                            input_win.refresh()
+                            mode = 0
+                            
+                        elif ord(key) == 27: # Escape
+                            subprompt_win.clear()
+                            subprompt_win.refresh()
+                            input_content = ''
+                            input_win.clear()
+                            input_win.refresh()
+                            mode = 0
 
 # Run Tests
 if debug_mode:
