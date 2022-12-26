@@ -1,6 +1,7 @@
 import curses
 import time
 import math
+import sys
 
 #  Example Layout:
 #   _________________________
@@ -28,7 +29,7 @@ def format_time(t):
     # t :: Int such that t >= 0
     # Returns String
     # Takes some duration t in seconds and returns a string representing that duration in terms of minutes and seconds
-    return (str(t/60) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
+    return (str(math.floor(t/60)) + ':' + ('0' if t%60 < 10 else '' ) + str(t%60))
 
 def detect_partial_match(query,model): 
     # query, model :: String
@@ -301,7 +302,7 @@ def main(stdscr):
     do_hints = True
     prioritize_shy_speakers = True
 
-    while(True):
+    while(True): # There's technically a loop here, but it's very likely that its contents will only be executed once.  
 
         APP_WIDTH = 50
 
@@ -319,9 +320,9 @@ def main(stdscr):
             
         else:
 
-            APP_X_POS = (curses.COLS-APP_WIDTH)/2
+            APP_X_POS = math.trunc((curses.COLS-APP_WIDTH)/2)
 
-            APP_Y_POS = (curses.LINES-APP_HEIGHT)/2
+            APP_Y_POS = math.trunc((curses.LINES-APP_HEIGHT)/2)
             SPEAKERS_Y_POS = 0
             CLOCK_Y_POS = SPEAKERS_Y_POS + SPEAKERS_HEIGHT + 1
             PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
@@ -557,5 +558,12 @@ def main(stdscr):
                         input_win.refresh()
                         mode = 0
 
-discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
+if sys.version[0] == '2':
+    discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
+elif sys.version[0] == '3':
+    discussion = Discussion(mover=Speaker(input('Who moved the motion? ')))
+else:
+    print('Python version not recognized')
+    exit()
+
 curses.wrapper(main)
