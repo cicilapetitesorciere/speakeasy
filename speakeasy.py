@@ -1,4 +1,5 @@
 import curses
+import _curses
 import time
 import math
 import sys
@@ -312,15 +313,7 @@ def main(stdscr):
         PROMPT_Y_POS = CLOCK_Y_POS + CLOCK_HEIGHT + 1
         SUBPROMPT_Y_POS = PROMPT_Y_POS + PROMPT_HEIGHT
 
-        # If the window is too small
-        if curses.COLS <= APP_WIDTH or curses.LINES <= APP_HEIGHT:
-            stdscr.clear()
-            stdscr.addstr('Window too small')
-            stdscr.refresh()
-            stdscr.getch()
-
-        # If the window is the right size    
-        else:
+        try:
             stdscr.clear()
             stdscr.addch(APP_Y_POS-1,APP_X_POS-1, curses.ACS_ULCORNER)
             stdscr.addch(APP_Y_POS-1,APP_X_POS+APP_WIDTH, curses.ACS_URCORNER)
@@ -553,6 +546,14 @@ def main(stdscr):
                             input_win.clear()
                             input_win.refresh()
                             mode = 0
+        except _curses.error:
+            try:
+                stdscr.clear()
+                stdscr.addstr('Error: your terminal window is likely too small')
+                stdscr.refresh()
+            except:
+                pass
+            stdscr.getkey()
 
 # Run Tests
 if debug_mode:
