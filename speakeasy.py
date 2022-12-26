@@ -217,19 +217,26 @@ class Discussion:
         return False
     
     # Setters
-    def add_speach(self, speaker_name, is_response):
+    def add_speach(self, speaker_name, is_response, force_now=False):
         # speaker_name :: String
         # is_response :: Bool
-        # Adds a new speach to the upcoming speaches
+        # force_now :: Bool
+        # Adds a new speach to the upcoming speaches. If force_now is set to True, then the new speech is immediately placed into the current speech spot. Otherwise it is added to the list of upcoming speeches
         speaker = self.find_speaker(speaker_name)
         if speaker == False:
             speaker = Speaker(speaker_name)
             self.__speakers.append(speaker)
-        self.__upcoming_speaches.append(Speach(speaker, is_response))
-        if is_response:
-            self.__number_of_upcoming_responses += 1
+
+        speech = Speach(speaker, is_response)
+        if force_now:
+            self.__past_speaches.append(self.__current_speach)
+            self.__current_speach = speech
         else:
-            self.__number_of_upcoming_new_points += 1
+            self.__upcoming_speaches.append(speech)
+            if is_response:
+                self.__number_of_upcoming_responses += 1
+            else:
+                self.__number_of_upcoming_new_points += 1
 
     def goto_next_speach(self):
         # Returns Void
@@ -282,8 +289,6 @@ class Discussion:
         
         assert(actual_duration == self.__duration)
 
-
-
 def main(stdscr):
 
     # Setup
@@ -295,7 +300,7 @@ def main(stdscr):
     global discussion
     do_hints = True
     prioritize_shy_speakers = True
-    
+
     while(True):
 
         APP_WIDTH = 50
@@ -446,6 +451,8 @@ def main(stdscr):
         most_recent_recorded_time = math.trunc(time.time())
 
         while(True):
+
+            discussion._audit()
             
             current_time =  math.trunc(time.time())
             
@@ -476,7 +483,7 @@ def main(stdscr):
                 elif ord(key) == 10 and input_content != '': # Return
                     autocomplete_guess = ''
                     subprompt_win.clear()
-                    subprompt_win.addstr('Type (1 or 2)?')
+                    subprompt_win.addstr('Type (\'1\', \'2\', or \'!\')?')
                     subprompt_win.refresh()
                     mode = 1
                 elif ord(key) == 16: # Ctrl-P (Pause)
@@ -523,6 +530,16 @@ def main(stdscr):
                     input_win.clear()
                     input_win.refresh()
                     mode = 0
+                
+                if key == '!':
+                    discussion.add_speach(speaker_name=input_content, is_response=discussion.get_current_speach().IS_RESPONSE, force_now=True)
+                    update_speakers_box()
+                    subprompt_win.clear()
+                    subprompt_win.refresh()
+                    input_content = ''
+                    input_win.clear()
+                    input_win.refresh()
+                    mode = 0
                     
                 elif ord(key) == 27: # Escape
                     subprompt_win.clear()
@@ -531,7 +548,6 @@ def main(stdscr):
                     input_win.clear()
                     input_win.refresh()
                     mode = 0
-
 
 discussion = Discussion(mover=Speaker(raw_input('Who moved the motion? ')))
 curses.wrapper(main)
