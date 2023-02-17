@@ -3,6 +3,7 @@ import _curses
 import time
 import math
 import sys
+import os
 
 #  Example Layout:
 #   _________________________
@@ -302,6 +303,23 @@ class Discussion:
         self.__duration += 1
         self.get_current_speach()._tick_speach_time()
 
+    # Other Methods
+    def save_to_file(self, filename):
+        f = open(filename, 'w')
+        
+        def wrtie_speech(prefix, speech):
+            f.write(prefix + speech.get_speaker().get_name() + ' ' + str(speech.get_duration()/60) + '\n')
+        
+        for speech in self.get_past_speaches():
+            wrtie_speech('-', speech)
+        
+        wrtie_speech('>', self.get_current_speach())
+
+        for speech in self.get_upcoming_speaches():
+            wrtie_speech('-', speech)
+
+        f.close()
+
     # Pseudoprivate
     def _audit(self):
         number_of_actual_upcoming_new_points = 0
@@ -332,6 +350,8 @@ def main(stdscr):
     global discussion
     global priority_mode
     global do_hints
+
+    discussion.save_to_file('delete.txt')
 
     while(True): # There's technically a loop here, but it's very likely that its contents will only be executed once.  
 
@@ -494,6 +514,7 @@ def main(stdscr):
                     update_speakers_box()
                     update_clock()
                     most_recent_recorded_time = current_time
+                    discussion.save_to_file('speaking-order.txt')
 
                 try:
                     key = input_win.getkey()
