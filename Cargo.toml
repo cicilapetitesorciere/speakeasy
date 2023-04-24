@@ -1,0 +1,16 @@
+[package]
+name = "speakeasy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+build_html = "2.4.0"
+case_insensitive_hashmap = "1.0.0"
+chrono = "0.4.24"
+empty-box = "0.1.1"
+lazy_static = "1.4.0"
+libc = "0.2.142"
+rocket = "0.5.0-rc.1"
+serde = "1.0.160"
+serde_json = "1.0.96"
+unicase = "2.6.0"

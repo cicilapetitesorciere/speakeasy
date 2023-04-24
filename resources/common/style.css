@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css?family=IBMPlexMono');
+
+:root {
+    --mathsoc-pink: #c60078;
+}
+
+body {
+    font-family: 'IBMPlexMono', sans-serif;
+}
+
+table {
+    width: 100%;
+    margin-bottom: 10px;
+    border-collapse: collapse;
+}
+
+th {
+    color: var(--mathsoc-pink);
+    font-weight: bold;
+}
+
+td {
+    border: 1px solid;
+}
+
+button {
+    background-color: var(--mathsoc-pink);
+    color: white;
+    font-weight: bold;
+    padding: 7px 15px;
+}
+
+input[type=text] {
+    border: 2px solid var(--mathsoc-pink);
+    padding: 7px 20px;
+    margin: 8px 0;
+    box-sizing: border-box;
+}
+
+input[type=text]:focus {
+    outline: none;
+    border: 3px solid var(--mathsoc-pink);
+}

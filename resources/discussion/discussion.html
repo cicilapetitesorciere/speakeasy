@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Speakeasy</title>
+    <link rel="stylesheet" href="/resources/common/style.css">
+    <script src="/resources/discussion/render.js"></script>
+    <script src="/resources/discussion/buttons.js"></script>
+  </head>
+  <body>
+    <h1>Speakeasy</h1>
+    <div id="speaking_order"></div>
+    <div id="add_speaker_controls">
+      <input id="speaker_name" type="text">
+      <button onclick="addSpeech(1)">1</button>
+      <button onclick="addSpeech(2)">2</button>
+    </div>
+    <div id="master_controls">
+      <button onclick="next()">Next Speaker</button>
+      <button onclick="previous()">Previous Speaker</button>
+    </div>
+  </body>
+</html>
