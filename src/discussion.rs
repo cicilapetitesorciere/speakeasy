@@ -49,9 +49,6 @@ impl Discussion {
             None => Arc::new(Mutex::new(Speaker::new(speaker_name))),
         };
 
-        // TODO this should not have to be done by the client. It should be automatic
-        speaker.lock().unwrap().increment_number_of_speeches_given();
-
         let new_speech = Box::new(
             Speech::new(
                 Arc::clone(&speaker), 
