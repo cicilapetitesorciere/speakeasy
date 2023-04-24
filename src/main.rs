@@ -24,18 +24,18 @@ lazy_static! {
 fn add_discussion(id: &str) {
     let discp: Arc<Mutex<Discussion>> =  Arc::new(Mutex::new(Discussion::new()));
     
-        {  
-            let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
-            thread::spawn(move || {
-                loop {
-                    let s = Duration::from_secs(1);
-                    thread::sleep(s);
-                    (*discp_cpy).lock().unwrap().tick_clock();
-                }
-            });
-        }
-    
-        MDISCUSSIONS.lock().unwrap().insert(id.to_string(), discp);
+    {  
+        let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
+        thread::spawn(move || {
+            loop {
+                let s = Duration::from_secs(1);
+                thread::sleep(s);
+                (*discp_cpy).lock().unwrap().tick_clock();
+            }
+        });
+    }
+
+    MDISCUSSIONS.lock().unwrap().insert(id.to_string(), discp);
 }
 
 #[get("/")]
@@ -131,7 +131,7 @@ fn favicon(){
 
 #[launch]
 fn rocket() -> _ {
-    
+
     rocket::build().mount("/" , routes![
         favicon, 
         index,
