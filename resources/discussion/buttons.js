@@ -10,12 +10,15 @@ function addSpeech(stype) {
       stype: stype
     }),
   });
+  fetch_speaking_order();
 }
 
 function next() {
   fetch(window.location.href + "/next", {method: "POST"});
+  fetch_speaking_order();
 }
 
 function previous() {
   fetch(window.location.href + "/previous", {method: "POST"});
+  fetch_speaking_order();
 }
