@@ -20,21 +20,19 @@ pub struct Discussion {
     pub upcoming_speeches: LinkedList<Box<Speech>>,
     pub past_speeches: LinkedList<Box<Speech>>,
     pub duration: Duration,
+    pub paused: bool,
     pub priority_mode: PriorityMode,
 }
 
 impl Discussion {
     
-    pub fn new(mover_name: impl Into<UniCase<String>>) -> Self {
-        let case_insenstive_mover_name = mover_name.into();
-        let mover: Arc<Mutex<Speaker>> = Arc::new(Mutex::new(Speaker::new(case_insenstive_mover_name.clone())));
-        let mut speakers: CaseInsensitiveHashMap<Arc<Mutex<Speaker>>> = CaseInsensitiveHashMap::new();
-        speakers.insert(case_insenstive_mover_name, Arc::clone(&mover));
+    pub fn new() -> Self {
         let ret = Self {
-            speakers: speakers,
-            upcoming_speeches: LinkedList::from([Box::new(Speech::new(mover, false, 0))]),
+            speakers: CaseInsensitiveHashMap::new(),
+            upcoming_speeches: LinkedList::from([]),
             past_speeches: LinkedList::from([]),
             duration: Duration::from_secs(0),
+            paused: false,
             priority_mode: PriorityMode::FirstComeFirstServe,
         };
 
@@ -200,12 +198,13 @@ impl Discussion {
     }
 
     pub fn tick_clock(&mut self) {
-        self.duration += Duration::from_secs(1);
-
-        match self.upcoming_speeches.front_mut() {
-            Some(speech) => (*speech).tick_clock(),
-            None => (),
-        };
+        if !self.paused {
+            self.duration += Duration::from_secs(1);
+            match self.upcoming_speeches.front_mut() {
+                Some(speech) => (*speech).tick_clock(),
+                None => (),
+            };
+        }
 
     }
 

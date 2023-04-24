@@ -21,6 +21,23 @@ lazy_static! {
     static ref MDISCUSSIONS: Mutex<HashMap<String, Arc<Mutex<Discussion>>>> = Mutex::new(HashMap::new());
 }
 
+fn add_discussion(id: &str) {
+    let discp: Arc<Mutex<Discussion>> =  Arc::new(Mutex::new(Discussion::new()));
+    
+        {  
+            let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
+            thread::spawn(move || {
+                loop {
+                    let s = Duration::from_secs(1);
+                    thread::sleep(s);
+                    (*discp_cpy).lock().unwrap().tick_clock();
+                }
+            });
+        }
+    
+        MDISCUSSIONS.lock().unwrap().insert(id.to_string(), discp);
+}
+
 #[get("/")]
 async fn index() -> Option<NamedFile> {
     if let Ok(file) = NamedFile::open(Path::new("resources/index/index.html")).await {
@@ -39,8 +56,13 @@ async fn get_resource(dirname: &str, filename: &str) -> Option<NamedFile> {
     }
 }
 
-#[get("/discussion/<_>")]
-async fn get_discussion() -> Option<NamedFile> {
+#[get("/discussion/<id>")]
+async fn get_discussion(id: &str) -> Option<NamedFile> {
+
+    if !MDISCUSSIONS.lock().unwrap().contains_key(id) {
+        add_discussion(id);
+    }
+
     if let Ok(file) = NamedFile::open(Path::new("resources/discussion/discussion.html")).await {
         return Some(file);
     } else {
@@ -64,7 +86,7 @@ fn get_speaking_order(id: &str) -> String {
             }
             return ret.to_html_string();
         },
-        None => return format!("Error, no discussion named \"{}\".", id),
+        None => return "".to_string(),
     };
 }
 
@@ -109,22 +131,7 @@ fn favicon(){
 
 #[launch]
 fn rocket() -> _ {
-
-    let discp: Arc<Mutex<Discussion>> =  Arc::new(Mutex::new(Discussion::new("Cici")));
     
-    {  
-        let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
-        thread::spawn(move || {
-            loop {
-                let s = Duration::from_secs(1);
-                thread::sleep(s);
-                (*discp_cpy).lock().unwrap().tick_clock();
-            }
-        });
-    }
-
-    MDISCUSSIONS.lock().unwrap().insert("MathSoc".to_string(), discp);
-
     rocket::build().mount("/" , routes![
         favicon, 
         index,
