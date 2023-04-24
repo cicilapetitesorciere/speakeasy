@@ -1,22 +1,22 @@
 
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use unicase::UniCase;
-use case_insensitive_hashmap::CaseInsensitiveHashMap;
-use std::collections::LinkedList;
+use std::collections::{HashMap, LinkedList};
 
 use self::speech::{Speaker, Speech};
 
 mod speech;
 
+#[derive(Debug)]
 pub enum PriorityMode {
     FirstComeFirstServe,
     FavourShiestByPointsRaised,
     FavourShiestByTime,
 }
 
+#[derive(Debug)]
 pub struct Discussion {
-    pub speakers: CaseInsensitiveHashMap<Arc<Mutex<Speaker>>>,
+    pub speakers: HashMap<String, Arc<Mutex<Speaker>>>,
     pub upcoming_speeches: LinkedList<Box<Speech>>,
     pub past_speeches: LinkedList<Box<Speech>>,
     pub duration: Duration,
@@ -24,11 +24,12 @@ pub struct Discussion {
     pub priority_mode: PriorityMode,
 }
 
+
 impl Discussion {
     
     pub fn new() -> Self {
         let ret = Self {
-            speakers: CaseInsensitiveHashMap::new(),
+            speakers: HashMap::new(),
             upcoming_speeches: LinkedList::from([]),
             past_speeches: LinkedList::from([]),
             duration: Duration::from_secs(0),
@@ -39,12 +40,15 @@ impl Discussion {
         return ret;
     }
     
-    pub fn add_speech<T: Into<UniCase<String>> + Clone>(&mut self, speaker_name: T, is_response: bool) -> bool {
+    pub fn add_speech(&mut self, speaker_name: String, is_response: bool) -> bool {
 
-        // TODO this all uses wayyyyyy to much cloning. But also see test2() 
-        let speaker: Arc<Mutex<Speaker>> = match self.speakers.get(speaker_name.clone()) {
+        let speaker: Arc<Mutex<Speaker>> = match self.speakers.get(&speaker_name) {
             Some(speaker_p) => Arc::clone(&speaker_p),
-            None => Arc::new(Mutex::new(Speaker::new(speaker_name))),
+            None => {
+                let spkr = Arc::new(Mutex::new(Speaker::new(speaker_name.clone())));
+                self.speakers.insert(speaker_name, Arc::clone(&spkr));
+                spkr
+            },
         };
 
         let new_speech = Box::new(
@@ -210,31 +214,13 @@ impl Discussion {
 
 }
 
-/*
 #[test]
 fn test1() {
-    let disc = Discussion::new("Cici");
+    let mut discussion = Discussion::new();
+    discussion.add_speech("Imane".to_string(), false);
+    discussion.add_speech("Cici".to_string(), false);
+    discussion.add_speech("Cici".to_string(), true);
+    discussion.add_speech("Imane".to_string(), true);
 
-    let cici: UniCase<String> = UniCase::from("CICI");
-    assert_ne!(disc.speakers.get("Cici"), None);
-    assert_ne!(disc.speakers.get("CiCi"), None);
-    assert_ne!(disc.speakers.get(cici), None);
-    assert_eq!(disc.speakers.get("Grace"), None);
-
-}
-*/
-
-#[test]
-fn test2() {
-    // A little something that's stumping me...
-    // Let's make a CaseInsensitiveHashMap with one key-value pair
-    let mut m: CaseInsensitiveHashMap<i32> = CaseInsensitiveHashMap::new();
-    m.insert("Key", 6);
-    let key: UniCase<String> = UniCase::from("key");
-
-    // When I do this, it works:
-    m.get(key);
-
-    // However if I replace it with this it does not:
-    // m.get(&key);
+    assert_eq!(format!("{:?}", discussion.speakers.keys()), "[\"Cici\", \"Imane\"]".to_string());
 }

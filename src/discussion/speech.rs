@@ -26,6 +26,7 @@ impl Speaker {
 
 }
 
+#[derive(Debug)]
 pub struct Speech {
     pub speaker: Arc<Mutex<Speaker>>,
     pub duration: Duration,
