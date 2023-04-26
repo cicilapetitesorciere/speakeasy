@@ -41,16 +41,27 @@ fn get_discussion(id: &str) -> Result<Arc<Mutex<Discussion>>, GetDiscussionError
 fn add_discussion(id: &str) {
     let discp: Arc<Mutex<Discussion>> =  Arc::new(Mutex::new(Discussion::new()));
     let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
-    
-    MDISCUSSIONS.lock().unwrap().insert(id.to_string(), discp);
-    
-    thread::spawn(move || {
-        loop {
-            let s = Duration::from_secs(1);
-            thread::sleep(s);
-            (*discp_cpy).lock().unwrap().tick_clock();
+
+    match MDISCUSSIONS.lock() {
+        Ok(mut discussions_hashmap) => {
+
+            HashMap::insert(&mut discussions_hashmap, id.to_string(), discp);
+
+            thread::spawn(move || {
+                loop {
+                    let s = Duration::from_secs(1);
+                    thread::sleep(s);
+                    if let Ok(mut discp_locked) = (*discp_cpy).lock() {
+                        discp_locked.tick_clock();
+                    }
+                }
+            });
+        },
+        Err(_) => {
+            debug_panic!();
         }
-    });
+    };
+
 
 }
 
