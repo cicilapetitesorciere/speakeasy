@@ -42,7 +42,7 @@ impl Discussion {
             past_speeches: LinkedList::new(),
             duration: Duration::from_secs(0),
             paused: false,
-            priority_mode: PriorityMode::FavourBriefest,
+            priority_mode: PriorityMode::FirstComeFirstServe,
         };
 
         return ret;
