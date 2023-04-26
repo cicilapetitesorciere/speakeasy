@@ -172,7 +172,7 @@ impl Discussion {
         match self.priority_mode {
             
             // TODO fill out this match statement
-            _ => {
+            PriorityMode::FirstComeFirstServe => {
 
                 // If we are adding a response, then we need to make sure it gets 
                 //  placed just before the next new point, not including the front
@@ -218,6 +218,17 @@ impl Discussion {
                     self.upcoming_speeches.push_back(new_speech);
                     return true;
                 }
+            }
+
+            PriorityMode::FavourBriefest => {
+
+                if new_speech.is_response {
+
+                    insert_just_before()
+
+                }
+
+                return false;
             }
             
         };
