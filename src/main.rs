@@ -6,7 +6,7 @@ mod format_duration;
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use discussion::Discussion;
+use discussion::{Discussion, PriorityMode};
 use messages::*;
 use lazy_static::lazy_static;
 use std::path::Path;
@@ -62,6 +62,11 @@ async fn http_index() -> Option<NamedFile> {
     } else {
         return None;
     }
+}
+
+#[get("/favicon.ico")]
+fn http_favicon() {
+    return;
 }
 
 #[get("/resources/<dirname>/<filename>")]
@@ -142,7 +147,7 @@ fn http_add_speaker(id: &str, info: &str) {
     match get_discussion(id) {
         Ok(discussion) => match serde_json::from_str::<NewSpeakerRequest>(info){
             Ok(nsr) => match discussion.lock() {
-                Ok(mut locked_discussion) => { locked_discussion.add_speech(nsr.name, nsr.stype == 2); ()},
+                Ok(mut locked_discussion) => { locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()},
                 Err(_e) => { debug_panic!(); ()},
             },
             Err(e) => debug_panic!(e),
@@ -189,9 +194,22 @@ fn http_pause(id: &str, state: &str) {
     };
 }
 
-#[get("/favicon.ico")]
-fn http_favicon(){
-    return;
+#[post("/discussion/<id>/set_priority_mode/<mode>")]
+fn http_set_priority_mode(id: &str, mode: &str) {
+    match get_discussion(id) {
+        Ok(discussion) => match discussion.lock() {
+            Ok(mut discussion_locked) => discussion_locked.set_priority_mode(match mode {
+                "fcfs" => PriorityMode::FirstComeFirstServe,
+                "brevity" => PriorityMode::FavourBriefest,
+                _ => {
+                    debug_panic!();
+                    PriorityMode::FirstComeFirstServe
+                }
+            }),
+            Err(_) => debug_panic!()
+        },
+        Err(_) => debug_panic!()
+    }
 }
 
 #[launch]
@@ -207,6 +225,7 @@ fn rocket() -> _ {
         http_next,
         http_previous,
         http_pause,
+        http_set_priority_mode
     ])
 
 }

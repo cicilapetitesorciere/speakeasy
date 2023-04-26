@@ -13,7 +13,7 @@ pub fn prepend<T>(a: &mut LinkedList<T>, b: &mut LinkedList<T>) {
     b.append(a);
 }
 
-// insert_just_before(ll, items, condition) inserts looks finds the first element
+// insert_just_before(ll, items, condition) finds the first element
 //  of `ll` which satisfies `condition` and inserts all the elements of `items`
 //  just before it. After this operation, `items` will empty.
 //

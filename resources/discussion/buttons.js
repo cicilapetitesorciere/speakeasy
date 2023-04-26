@@ -37,6 +37,7 @@ function previous() {
   refresh();
 }
 
-function change_priority_mode() {
-  alert("This feature is not yet implimented! (Sorry)");
+function change_priority_mode(option) {
+  fetch(window.location.href + "/set_priority_mode/" + option.value, {method: "POST"});
+  refresh();
 }
