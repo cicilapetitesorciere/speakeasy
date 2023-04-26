@@ -1,6 +1,5 @@
 #[macro_use] extern crate rocket;
 
-use std::hash::Hash;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use discussion::Discussion;
