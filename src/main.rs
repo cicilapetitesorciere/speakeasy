@@ -172,7 +172,9 @@ fn http_add_speaker(id: &str, info: &str) {
     match get_discussion(id) {
         Ok(discussion) => match serde_json::from_str::<NewSpeakerRequest>(info){
             Ok(nsr) => match discussion.lock() {
-                Ok(mut locked_discussion) => { let _ = locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()},
+                Ok(mut locked_discussion) => { 
+                    let _ = locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()
+                },
                 Err(_e) => { debug_panic!(); ()},
             },
             Err(e) => debug_panic!(e),
