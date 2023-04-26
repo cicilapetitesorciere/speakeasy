@@ -8,7 +8,7 @@ fn get_nseconds(d: &Duration) -> u64 {
     return d.as_secs() % 60;
 }
 
-pub fn format_duration_M_S(d: &Duration) -> String {
+pub fn format_duration_m_s(d: &Duration) -> String {
     return format!("{}:{:0>2}", get_nminutes(d), get_nseconds(d));
 }
 

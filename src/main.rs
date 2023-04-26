@@ -17,7 +17,6 @@ use std::thread;
 use std::time::Duration;
 use format_duration::*;
 use serde_json;
-use rocket::http::RawStr;
 
 lazy_static! {
     static ref MDISCUSSIONS: Mutex<HashMap<String, Arc<Mutex<Discussion>>>> = Mutex::new(HashMap::new());
@@ -104,8 +103,8 @@ fn http_get_speaking_order(id: &str) -> String {
                     speaking_order.add_body_row([
                         speaker.name.to_string(),
                         (if speech.is_response {"2"} else {"1"}).to_string(),
-                        format_duration::format_duration_M_S(&speech.duration),
-                        format_duration::format_duration_M_S(&speaker.total_speaking_time),
+                        format_duration::format_duration_m_s(&speech.duration),
+                        format_duration::format_duration_m_s(&speaker.total_speaking_time),
                     ]);
                 }
                 StatusReport {
@@ -115,7 +114,7 @@ fn http_get_speaking_order(id: &str) -> String {
                         Status::Normal
                     },
                     speaking_order: speaking_order.to_html_string(),
-                    duration: format_duration_M_S(&locked_discussion.duration),
+                    duration: format_duration_m_s(&locked_discussion.duration),
                 }
             },
 
@@ -147,7 +146,7 @@ fn http_add_speaker(id: &str, info: &str) {
     match get_discussion(id) {
         Ok(discussion) => match serde_json::from_str::<NewSpeakerRequest>(info){
             Ok(nsr) => match discussion.lock() {
-                Ok(mut locked_discussion) => { locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()},
+                Ok(mut locked_discussion) => { let _ = locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()},
                 Err(_e) => { debug_panic!(); ()},
             },
             Err(e) => debug_panic!(e),
