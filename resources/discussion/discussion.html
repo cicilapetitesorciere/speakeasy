@@ -15,9 +15,17 @@
       <button onclick="addSpeech(1)">1</button>
       <button onclick="addSpeech(2)">2</button>
     </div>
-    <div id="master_controls">
+    <div id="show_master_controls" onclick="show_master_controls()">
+      <i><small>Show Master Controls</small></i>
+    </div>
+    <div hidden id="master_controls">
       <button onclick="next()">Next Speaker</button>
       <button onclick="previous()">Previous Speaker</button>
+      <br>
+      <select onchange="change_priority_mode()">
+        <option value="fcfs">First Come First Serve</option>
+        <option value="brevity">Prioritize Brief Speakers</option>
+      </select>
     </div>
   </body>
 </html>

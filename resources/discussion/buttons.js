@@ -22,3 +22,7 @@ function previous() {
   fetch(window.location.href + "/previous", {method: "POST"});
   fetch_speaking_order();
 }
+
+function change_priority_mode() {
+  alert("This feature is not yet implimented! (Sorry)");
+}
