@@ -17,7 +17,6 @@ use serde::Deserialize;
 use serde_json;
 
 mod discussion;
-mod ongoing_discussions_list;
 mod format_duration;
 
 lazy_static! {
