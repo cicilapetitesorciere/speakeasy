@@ -91,7 +91,7 @@ async fn http_get_resource(dirname: &str, filename: &str) -> Option<NamedFile> {
 #[get("/discussion/<id>")]
 async fn http_get_discussion(id: &str) -> Option<NamedFile> {
 
-    if !MDISCUSSIONS.lock().unwrap().contains_key(id) {
+    if let Err(GetDiscussionError::NoDiscussionFoundWithGivenID) = get_discussion(id) {
         add_discussion(id);
     }
 
@@ -100,24 +100,37 @@ async fn http_get_discussion(id: &str) -> Option<NamedFile> {
     } else {
         return None;
     }
+
+    
 }
 
 #[get("/discussion/<id>/status")]
 fn http_get_speaking_order(id: &str) -> String {
 
     let preret = match get_discussion(id) {
+
         Ok(discussion) => match discussion.lock() {
+            
             Ok(locked_discussion) => {
+
                 let mut speaking_order = Table::new().with_header_row(["Speaker Name", "Type", "Time Speaking", "Total Speaking Time"]);
+                
                 for speech in &locked_discussion.upcoming_speeches {
-                    let speaker = speech.speaker.lock().unwrap();
-                    speaking_order.add_body_row([
-                        speaker.name.to_string(),
-                        (if speech.is_response {"2"} else {"1"}).to_string(),
-                        format_duration::format_duration_m_s(&speech.duration),
-                        format_duration::format_duration_m_s(&speaker.total_speaking_time),
-                    ]);
+
+                    if let Ok(speaker) = speech.speaker.lock() {
+                        speaking_order.add_body_row([
+                            speaker.name.to_string(),
+                            (if speech.is_response {"2"} else {"1"}).to_string(),
+                            format_duration::format_duration_m_s(&speech.duration),
+                            format_duration::format_duration_m_s(&speaker.total_speaking_time),
+                        ]);
+                    } else {
+                        debug_panic!();
+                        return "Error in http_get_speaking_order(id)".to_string();
+                    }
+
                 }
+
                 StatusReport {
                     status: if locked_discussion.paused {
                         Status::Paused
@@ -126,7 +139,9 @@ fn http_get_speaking_order(id: &str) -> String {
                     },
                     speaking_order: speaking_order.to_html_string(),
                     duration: format_duration_m_s(&locked_discussion.duration),
+              
                 }
+            
             },
 
             Err(_) => StatusReport::default(Status::ServerError),
@@ -168,18 +183,21 @@ fn http_add_speaker(id: &str, info: &str) {
 
 #[post("/discussion/<id>/next")]
 fn http_next(id: &str) {
-    match MDISCUSSIONS.lock().unwrap().get(id) {
-        Some(discussion) => discussion.lock().unwrap().goto_next_speech(),
-        None => false,
-    };
+    if let Ok(disc) = get_discussion(id) {
+        if let Ok(mut disc_locked) = disc.lock() {
+            disc_locked.goto_next_speech();
+        }
+    }
+
 }
 
 #[post("/discussion/<id>/previous")]
 fn http_previous(id: &str) {
-    match MDISCUSSIONS.lock().unwrap().get(id) {
-        Some(discussion) => discussion.lock().unwrap().goto_previous_speech(),
-        None => false,
-    };
+    if let Ok(disc) = get_discussion(id) {
+        if let Ok(mut disc_locked) = disc.lock() {
+            disc_locked.goto_previous_speech();
+        }
+    }
 }
 
 #[post("/discussion/<id>/setpause/<state>")]

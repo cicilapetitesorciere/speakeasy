@@ -1,3 +1,4 @@
+use debug_panic::debug_panic;
 use unicase::UniCase;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -37,7 +38,14 @@ pub struct Speech {
 impl Speech {
 
     pub fn new(speaker: Arc<Mutex<Speaker>>, is_response: bool, fcfs_order: usize) -> Self {
-        speaker.lock().unwrap().number_of_speeches_given += 1;
+
+        match speaker.lock() {
+            Ok(mut speaker_locked) => speaker_locked.number_of_speeches_given += 1,
+            Err(_) => {
+                debug_panic!();
+            }
+        };
+
         return Self {
             speaker: speaker,
             duration: Duration::from_secs(0),
@@ -48,7 +56,17 @@ impl Speech {
 
     pub fn tick_clock(&mut self) {
         self.duration += Duration::from_secs(1);
-        self.speaker.lock().unwrap().tick_speaking_time();
+        match self.speaker.lock() {
+
+            Ok(mut speaker_locked) => {
+                speaker_locked.tick_speaking_time();
+            },
+
+            Err(_) => {
+                debug_panic!();
+            }
+
+        };
     }
 
 }
