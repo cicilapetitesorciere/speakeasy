@@ -10,17 +10,31 @@ function addSpeech(stype) {
       stype: stype
     }),
   });
-  fetch_speaking_order();
+  refresh();
+}
+
+function pointOfOrder() {
+  fetch(window.location.href + "/setpause/pause", {
+    method: "POST",
+  });
+  refresh();
+}
+
+function resolvePointOfOrder() {
+  fetch(window.location.href + "/setpause/unpause", {
+    method: "POST",
+  });
+  refresh();
 }
 
 function next() {
   fetch(window.location.href + "/next", {method: "POST"});
-  fetch_speaking_order();
+  refresh();
 }
 
 function previous() {
   fetch(window.location.href + "/previous", {method: "POST"});
-  fetch_speaking_order();
+  refresh();
 }
 
 function change_priority_mode() {

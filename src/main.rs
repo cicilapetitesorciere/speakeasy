@@ -1,22 +1,23 @@
 #[macro_use] extern crate rocket;
 
+mod discussion;
+mod messages;
+mod format_duration;
+
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use discussion::Discussion;
+use messages::*;
 use lazy_static::lazy_static;
 use std::path::Path;
 use rocket::fs::NamedFile;
 use build_html::*;
 use debug_panic::debug_panic;
-
 use std::thread;
 use std::time::Duration;
-
-use serde::Deserialize;
+use format_duration::*;
 use serde_json;
-
-mod discussion;
-mod format_duration;
+use rocket::http::RawStr;
 
 lazy_static! {
     static ref MDISCUSSIONS: Mutex<HashMap<String, Arc<Mutex<Discussion>>>> = Mutex::new(HashMap::new());
@@ -86,30 +87,53 @@ async fn http_get_discussion(id: &str) -> Option<NamedFile> {
     }
 }
 
-#[get("/discussion/<id>/speaking_order.html")]
+#[get("/discussion/<id>/status")]
 fn http_get_speaking_order(id: &str) -> String {
-    match MDISCUSSIONS.lock().unwrap().get(id) {
-        Some(discussion) => {
-            let mut ret = Table::new().with_header_row(["Speaker Name", "Type", "Time Speaking", "Total Speaking Time"]);
-            for speech in &discussion.lock().unwrap().upcoming_speeches {
-                let speaker = speech.speaker.lock().unwrap();
-                ret.add_body_row([
-                    speaker.name.to_string(),
-                    (if speech.is_response {2} else {1}).to_string(),
-                    format_duration::format_duration_M_S(&speech.duration),
-                    format_duration::format_duration_M_S(&speaker.total_speaking_time),
-                ]);
-            }
-            return ret.to_html_string();
-        },
-        None => return "".to_string(),
-    };
-}
 
-#[derive(Deserialize)]
-struct NewSpeakerRequest {
-    name: String,
-    stype: u8,
+    let preret = match get_discussion(id) {
+        Ok(discussion) => match discussion.lock() {
+            Ok(locked_discussion) => {
+                let mut speaking_order = Table::new().with_header_row(["Speaker Name", "Type", "Time Speaking", "Total Speaking Time"]);
+                for speech in &locked_discussion.upcoming_speeches {
+                    let speaker = speech.speaker.lock().unwrap();
+                    speaking_order.add_body_row([
+                        speaker.name.to_string(),
+                        (if speech.is_response {"2"} else {"1"}).to_string(),
+                        format_duration::format_duration_M_S(&speech.duration),
+                        format_duration::format_duration_M_S(&speaker.total_speaking_time),
+                    ]);
+                }
+                StatusReport {
+                    status: if locked_discussion.paused {
+                        Status::Paused
+                    } else {
+                        Status::Normal
+                    },
+                    speaking_order: speaking_order.to_html_string(),
+                    duration: format_duration_M_S(&locked_discussion.duration),
+                }
+            },
+
+            Err(_) => StatusReport::default(Status::ServerError),
+        }
+
+        Err(GetDiscussionError::NoDiscussionFoundWithGivenID) => StatusReport::default(Status::NonExistant),
+        
+        Err(GetDiscussionError::CouldNotLock) => {
+            debug_panic!();
+            StatusReport::default(Status::NonExistant)
+        },
+         
+    };
+
+    match serde_json::to_string(&preret) {
+        Ok(ret) => return ret,
+        Err(_) => {
+            debug_panic!();
+            return "".to_string();
+        }
+    };
+
 }
 
 #[post("/discussion/<id>/add_speaker", format="json", data="<info>")]
@@ -143,6 +167,28 @@ fn http_previous(id: &str) {
     };
 }
 
+#[post("/discussion/<id>/setpause/<state>")]
+fn http_pause(id: &str, state: &str) {
+    match get_discussion(id) {
+        Ok(discussion) => {
+            match discussion.lock() {
+                Ok(mut locked_discussion) => if state == "pause" {
+                    locked_discussion.paused = true;
+                } else if state == "unpause" {
+                    locked_discussion.paused = false;
+                } else {
+                    debug_panic!();
+                },
+                Err(_) => debug_panic!(),
+            }
+        }
+        Err(_) => {
+            debug_panic!();
+            return ();
+        }
+    };
+}
+
 #[get("/favicon.ico")]
 fn http_favicon(){
     return;
@@ -160,5 +206,7 @@ fn rocket() -> _ {
         http_add_speaker,
         http_next,
         http_previous,
+        http_pause,
     ])
+
 }

@@ -41,3 +41,15 @@ input[type=text]:focus {
     outline: none;
     border: 3px solid var(--mathsoc-pink);
 }
+
+#poo_message {
+    color: var(--mathsoc-pink);
+    font-size: 500%;
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% {
+        opacity: 0;
+    }
+}

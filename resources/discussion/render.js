@@ -1,7 +1,20 @@
-function fetch_speaking_order() {
-  fetch(window.location.href + "/speaking_order.html")
+function refresh() {
+  fetch(window.location.href + "/status")
       .then(res => res.text())
-      .then(data => document.getElementById("speaking_order").innerHTML = data);
+      .then(data => {
+        const parsed_data = JSON.parse(data);
+        if (parsed_data.status == "Normal") {
+          document.getElementById("speaking_order").innerHTML = parsed_data.speaking_order;
+          document.getElementById("header").innerHTML = "Speakeasy - " + parsed_data.duration;
+          document.getElementById("controls").removeAttribute("hidden");
+          document.getElementById("point_of_order").setAttribute("hidden","");
+        } else if (parsed_data.status == "Paused") {
+          document.getElementById("speaking_order").innerHTML = "";
+          document.getElementById("controls").setAttribute("hidden","");
+          document.getElementById("point_of_order").removeAttribute("hidden");
+        }
+          
+      });
 }
 
 function show_master_controls() {
@@ -12,6 +25,6 @@ function show_master_controls() {
 }
 
 window.onload = (event) => {
-  fetch_speaking_order();
-  setInterval(fetch_speaking_order, 1000);
+  refresh();
+  setInterval(refresh, 1000);
 };
