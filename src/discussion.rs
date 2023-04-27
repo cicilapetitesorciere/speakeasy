@@ -233,7 +233,6 @@ impl Discussion {
 
     }
 
-    #[allow(unused_variables)]
     pub fn add_new_speech(&mut self, speaker_name: String, is_response: bool) -> Result<(), AddSpeechError> {
 
         let speaker: Arc<Mutex<Speaker>> = match self.speakers.get(&speaker_name) {
