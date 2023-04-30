@@ -13,7 +13,7 @@ pub mod speech;
 const ZERO_SECONDS: Duration = Duration::from_secs(0);
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum PriorityMode {
     FirstComeFirstServe,
     FavourBriefest,
@@ -66,7 +66,12 @@ impl Discussion {
                 thread::sleep(ONE_SECOND);
                 
                 match (*ret_clock_pointer).lock() {
-                    Ok(mut ret_locked) => ret_locked.tick_clock(),
+                    Ok(mut ret_locked) => {
+                        ret_locked.tick_clock();
+                        if ret_locked.priority_mode != PriorityMode::FirstComeFirstServe {
+                            ret_locked.resort_speaking_order();
+                        }
+                    },
                     Err(e) => debug_panic!(e.to_string()),
                 }
 
@@ -229,12 +234,14 @@ impl Discussion {
 
         if is_response {
             self.first_response_block.push_back(new_speech);
+        } else if self.current_new_point.is_none() && self.first_response_block.is_empty() {
+            self.current_new_point = Some(new_speech);
         } else {
-            if self.current_new_point.is_none() && self.first_response_block.is_empty() {
-                self.current_new_point = Some(new_speech);
-            } else {
-                self.upcoming_speeches.push_back((new_speech, LinkedList::new()));
-            }
+            self.upcoming_speeches.push_back((new_speech, LinkedList::new()));
+        }
+
+        if self.priority_mode != PriorityMode::FirstComeFirstServe {
+            self.resort_speaking_order();
         }
         
     }
@@ -246,7 +253,9 @@ impl Discussion {
             Some(old_current_new_point) => self.past_speeches.push_back((old_current_new_point, LinkedList::new())),
 
             None => match (self.first_response_block.pop_front(), self.past_speeches.back_mut()) {
-                (Some(current_response), Some((_, most_recent_response_block))) => most_recent_response_block.push_back(current_response),
+                (Some(current_response), Some((_, most_recent_response_block))) => {
+                    most_recent_response_block.push_back(current_response);
+                },
                 (None, _) => (),
                 (Some(current_response), None) => {
                     eprintln!("You are trying to move a current response into past speeches, but there are no past speeches. Which doens't make a lot of sense. What was the current speech a response to.");
@@ -255,6 +264,14 @@ impl Discussion {
                     self.past_speeches.push_back((current_response, LinkedList::new()));
                 },
             },
+
+        }
+
+        if self.current_new_point.is_none() && self.first_response_block.is_empty() {
+            if let Some((next_new_point, next_response_block)) = self.upcoming_speeches.pop_front() {
+                self.current_new_point = Some(next_new_point);
+                self.first_response_block = next_response_block;
+            }
         }
 
     }
