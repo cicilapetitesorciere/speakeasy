@@ -1,19 +1,19 @@
 use debug_panic::debug_panic;
-use unicase::UniCase;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+const ONE_SECOND: Duration = Duration::from_secs(1);
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Speaker {
-    pub name: UniCase<String>,
+    pub name: String,
     pub total_speaking_time: Duration,
     pub number_of_speeches_given: u16,
 }
 
 impl Speaker {
 
-    pub fn new(name: impl Into<UniCase<String>>) -> Self {
+    pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             total_speaking_time: Duration::from_secs(0),
@@ -31,42 +31,15 @@ impl Speaker {
 pub struct Speech {
     pub speaker: Arc<Mutex<Speaker>>,
     pub duration: Duration,
-    pub is_response: bool,
     pub fcfs_order: usize,
 }
 
 impl Speech {
-
-    pub fn new(speaker: Arc<Mutex<Speaker>>, is_response: bool, fcfs_order: usize) -> Self {
-
-        match speaker.lock() {
-            Ok(mut speaker_locked) => speaker_locked.number_of_speeches_given += 1,
-            Err(_) => {
-                debug_panic!();
-            }
-        };
-
-        return Self {
-            speaker: speaker,
-            duration: Duration::from_secs(0),
-            is_response: is_response,
-            fcfs_order: fcfs_order,
-        };
-    }
-
     pub fn tick_clock(&mut self) {
-        self.duration += Duration::from_secs(1);
+        self.duration += ONE_SECOND;
         match self.speaker.lock() {
-
-            Ok(mut speaker_locked) => {
-                speaker_locked.tick_speaking_time();
-            },
-
-            Err(_) => {
-                debug_panic!();
-            }
-
-        };
+            Ok(mut speaker_locked) => speaker_locked.tick_speaking_time(),
+            Err(e) => debug_panic!(e.to_string()),
+        }
     }
-
 }

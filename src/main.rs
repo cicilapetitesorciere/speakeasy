@@ -7,16 +7,16 @@ mod format_duration;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use discussion::{Discussion, PriorityMode};
+use discussion::speech::*;
 use messages::*;
 use lazy_static::lazy_static;
 use std::path::Path;
 use rocket::fs::NamedFile;
 use build_html::*;
 use debug_panic::debug_panic;
-use std::thread;
-use std::time::Duration;
 use format_duration::*;
 use serde_json;
+use chrono::prelude::*;
 
 lazy_static! {
     static ref MDISCUSSIONS: Mutex<HashMap<String, Arc<Mutex<Discussion>>>> = Mutex::new(HashMap::new());
@@ -39,29 +39,20 @@ fn get_discussion(id: &str) -> Result<Arc<Mutex<Discussion>>, GetDiscussionError
 }
 
 fn add_discussion(id: &str) {
-    let discp: Arc<Mutex<Discussion>> =  Arc::new(Mutex::new(Discussion::new()));
-    let discp_cpy: Arc<Mutex<Discussion>> = Arc::clone(&discp);
+
+    let new_discussion: Arc<Mutex<Discussion>> =  Discussion::new();
 
     match MDISCUSSIONS.lock() {
+
         Ok(mut discussions_hashmap) => {
-
-            HashMap::insert(&mut discussions_hashmap, id.to_string(), discp);
-
-            thread::spawn(move || {
-                loop {
-                    let s = Duration::from_secs(1);
-                    thread::sleep(s);
-                    if let Ok(mut discp_locked) = (*discp_cpy).lock() {
-                        discp_locked.tick_clock();
-                    }
-                }
-            });
+            HashMap::insert(&mut discussions_hashmap, id.to_string(), new_discussion);
         },
+
         Err(_) => {
             debug_panic!();
         }
-    };
 
+    };
 
 }
 
@@ -101,70 +92,118 @@ async fn http_get_discussion(id: &str) -> Option<NamedFile> {
         return None;
     }
 
+}
+
+fn speech_to_html(speech: &Box<Speech>, stype: String) -> [String; 4]{
+    match speech.speaker.lock() {
+        Ok(speaker) => {
+            return [
+                speaker.name.clone(),
+                stype,
+                format_duration_m_s(&speech.duration),
+                format_duration_m_s(&speaker.total_speaking_time),
+            ];
+
+        }
+
+        Err(e) => {
+            debug_panic!(e.to_string());
+            [String::new(), String::new(), String::new(), String::new()]
+        }
+
+    }
     
 }
 
-#[get("/discussion/<id>/status")]
-fn http_get_speaking_order(id: &str) -> String {
+fn generate_status_report(id: &str) -> Box<StatusReport> {
 
-    let preret = match get_discussion(id) {
+    return Box::new (
+        
+        match get_discussion(id) {
 
-        Ok(discussion) => match discussion.lock() {
-            
-            Ok(locked_discussion) => {
-
-                let mut speaking_order = Table::new().with_header_row(["Speaker Name", "Type", "Time Speaking", "Total Speaking Time"]);
+            Ok(discussion) => match discussion.lock() {
                 
-                for speech in &locked_discussion.upcoming_speeches {
+                Ok(locked_discussion) => {
 
-                    if let Ok(speaker) = speech.speaker.lock() {
-                        speaking_order.add_body_row([
-                            speaker.name.to_string(),
-                            (if speech.is_response {"2"} else {"1"}).to_string(),
-                            format_duration::format_duration_m_s(&speech.duration),
-                            format_duration::format_duration_m_s(&speaker.total_speaking_time),
-                        ]);
-                    } else {
-                        debug_panic!();
-                        return "Error in http_get_speaking_order(id)".to_string();
+                    let mut speaking_order = Table::new().with_header_row (
+                        [
+                            "Speaker Name", 
+                            "Type", 
+                            "Time Speaking", 
+                            "Total Speaking Time"
+                        ]
+                    );
+
+                    if let Some(current_new_point) = &locked_discussion.current_new_point {
+                        speaking_order.add_body_row(speech_to_html(current_new_point, "1".to_string()));
                     }
 
-                }
+                    for response in &locked_discussion.first_response_block {
+                        speaking_order.add_body_row(speech_to_html(&response, "2".to_string()));
+                    }
+                    
+                    for (new_point, responses) in &locked_discussion.upcoming_speeches {
+                        speaking_order.add_body_row(speech_to_html(&new_point, "1".to_string()));
+                        for response in responses {
+                            speaking_order.add_body_row(speech_to_html(&response, "2".to_string()));
+                        }
+                    }
 
-                StatusReport {
-                    status: if locked_discussion.paused {
-                        Status::Paused
-                    } else {
-                        Status::Normal
-                    },
-                    speaking_order: speaking_order.to_html_string(),
-                    duration: format_duration_m_s(&locked_discussion.duration),
-              
-                }
+                    StatusReport {
+                        status: if locked_discussion.paused {
+                            Status::Paused
+                        } else {
+                            Status::Normal
+                        },
+                        speaking_order: speaking_order.to_html_string(),
+                        duration: format_duration_m_s(&locked_discussion.duration),
+                    }
+                
+                },
+
+                Err(_) => StatusReport::default(Status::ServerError),
+
+            }
+
+            Err(GetDiscussionError::NoDiscussionFoundWithGivenID) => StatusReport::default(Status::NonExistant),
             
+            Err(GetDiscussionError::CouldNotLock) => {
+                debug_panic!();
+                StatusReport::default(Status::NonExistant)
             },
-
-            Err(_) => StatusReport::default(Status::ServerError),
         }
-
-        Err(GetDiscussionError::NoDiscussionFoundWithGivenID) => StatusReport::default(Status::NonExistant),
-        
-        Err(GetDiscussionError::CouldNotLock) => {
-            debug_panic!();
-            StatusReport::default(Status::NonExistant)
-        },
          
-    };
-
-    match serde_json::to_string(&preret) {
-        Ok(ret) => return ret,
-        Err(_) => {
-            debug_panic!();
-            return "".to_string();
-        }
-    };
-
+    );   
 }
+
+type TimeStamp = i64;
+
+#[get("/discussion/<id>/status")]
+fn http_get_status_report(id: &str) -> String {
+
+    unsafe {
+
+        static mut CACHED_REPORT: String = String::new();
+        static mut CACHED_AT: TimeStamp = 0;
+
+        let now: TimeStamp = Utc::now().timestamp();
+        if now >= CACHED_AT + 1 {  
+            CACHED_REPORT = match serde_json::to_string(&generate_status_report(&id)) {
+                Ok(json) => json,
+                Err(e) => {
+                    debug_panic!(e.to_string());
+                    "".to_string()
+                }
+            };
+            CACHED_AT = now;
+        }
+
+        return CACHED_REPORT.clone();
+    
+    }
+
+}  
+
 
 #[post("/discussion/<id>/add_speaker", format="json", data="<info>")]
 fn http_add_speaker(id: &str, info: &str) {
@@ -173,7 +212,7 @@ fn http_add_speaker(id: &str, info: &str) {
         Ok(discussion) => match serde_json::from_str::<NewSpeakerRequest>(info){
             Ok(nsr) => match discussion.lock() {
                 Ok(mut locked_discussion) => { 
-                    let _ = locked_discussion.add_new_speech(nsr.name, nsr.stype == 2); ()
+                    let _ = locked_discussion.add_new_speech(nsr.name, nsr.stype == 2);
                 },
                 Err(_e) => { debug_panic!(); ()},
             },
@@ -250,7 +289,7 @@ fn rocket() -> _ {
         http_index,
         http_get_resource,
         http_get_discussion, 
-        http_get_speaking_order,
+        http_get_status_report,
         http_add_speaker,
         http_next,
         http_previous,

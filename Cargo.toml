@@ -5,9 +5,9 @@ edition = "2021"
 
 [dependencies]
 build_html = "2.4.0"
+chrono = "0.4.24"
 debug_panic = "0.2.1"
 lazy_static = "1.4.0"
 rocket = "0.5.0-rc.1"
 serde = "1.0.160"
 serde_json = "1.0.96"
-unicase = "2.6.0"
