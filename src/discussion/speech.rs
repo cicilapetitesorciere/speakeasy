@@ -4,7 +4,7 @@ use std::time::Duration;
 
 const ONE_SECOND: Duration = Duration::from_secs(1);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub struct Speaker {
     pub name: String,
     pub total_speaking_time: Duration,
