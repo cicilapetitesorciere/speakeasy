@@ -277,10 +277,24 @@ impl Discussion {
     }
 
     pub fn goto_previous_speech(&mut self) {
-
-        // TODO 
-        debug_panic!();
-
+        if let Some((most_recent_new_point, mut most_recent_response_block)) = self.past_speeches.pop_back() {
+            match most_recent_response_block.pop_back() {
+                Some(most_recent_response) => {
+                    // If the current speech is a new point, then we need to push both it and all its responses into the upcoming speeches
+                    if let Some(current_new_point) = mem::replace(&mut self.current_new_point, None) {
+                        self.upcoming_speeches.push_front((current_new_point, mem::replace(&mut self.first_response_block, LinkedList::new())));
+                    }
+                    self.first_response_block.push_front(most_recent_response);
+                    self.past_speeches.push_back((most_recent_new_point, most_recent_response_block));
+                },
+                None => {
+                    if let Some(current_new_point) = mem::replace(&mut self.current_new_point, Some(most_recent_new_point)) {
+                        debug_assert!(most_recent_response_block.is_empty());
+                        self.upcoming_speeches.push_front((current_new_point, mem::replace(&mut self.first_response_block, most_recent_response_block)));
+                    }
+                },
+            }
+        }
     }
 
     pub fn tick_clock(&mut self) {
