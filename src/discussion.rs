@@ -213,6 +213,73 @@ impl Discussion {
         self.resort_speaking_order();
     }
 
+    /*
+    pub fn alias_names(&mut self, name1: &String, name2: &String) {
+
+        // First we try and find speakers with name1 and name2. If either of them 
+        //  don't exist, then we create it
+        let [speaker1_arc, speaker2_arc]: [Arc<Mutex<Speaker>>; 2] = [name1, name2].map(|name: &String| self.speakers.get(name).map(Arc::clone).unwrap_or_else(||Arc::new(Mutex::new(Speaker::new((&name).to_string())))));
+
+        // We now need to make sure these two speakers we found are distict. If
+        //  they aren't, then we can end the function now because the two speakers
+        //  are already trivially aliased
+        if !Arc::ptr_eq(&speaker1_arc, &speaker2_arc) {
+
+            // We then insert a reference to speaker1 anywhere that speaker2 was 
+            //  (or should have been)
+            match speaker2_arc.lock() {
+                Ok(speaker2) => {
+                    self.speakers.insert(String::clone(&speaker2.name), Arc::clone(&speaker1_arc));
+                    for name in &speaker2.aliases {
+                        self.speakers.insert(String::clone(&name), Arc::clone(&speaker1_arc));
+                    }
+                },
+                Err(e) => debug_panic!(e.to_string()),
+            };
+    
+            // This next block will now go through each speech in the past,
+            //  present, and future speaking order, replacing any instance of
+            //  speaker2 with one to speaker1
+            {
+    
+                let speaker1_to_speaker2 = |speech: &mut Speech| if Arc::ptr_eq(&speech.speaker, &speaker2_arc) {
+                    speech.speaker = Arc::clone(&speaker1_arc);
+                };
+    
+                if let Some(speech) = &mut self.current_new_point {
+                    speaker1_to_speaker2(speech);
+                }
+    
+                for speech in &mut self.first_response_block {
+                    speaker1_to_speaker2(speech);
+                }
+                
+                for (new_point, response_block) in Iterator::chain(self.past_speeches.iter_mut(), self.upcoming_speeches.iter_mut()) {
+                    speaker1_to_speaker2(new_point);
+                    for response in response_block {
+                        speaker1_to_speaker2(response);
+                    }
+                }
+    
+            }
+    
+            // Finally, we should have scrubbed all references to speaker2 from
+            //  the discussion, leaving only the one reference scoped to this 
+            //  function
+            if let (Ok(mut speaker1), Ok(Ok(speaker2))) = (speaker1_arc.lock(), Arc::try_unwrap(speaker2_arc).map(Mutex::into_inner)) {
+                speaker1.merge_with(speaker2);
+            } else {
+                debug_panic!();
+            }
+
+        }
+
+
+        
+
+    }
+    */
+
     pub fn add_new_speech(&mut self, speaker_name: String, is_response: bool) {
 
         let speaker: Arc<Mutex<Speaker>> = match self.speakers.get(&speaker_name) {
@@ -287,11 +354,9 @@ impl Discussion {
                     self.first_response_block.push_front(most_recent_response);
                     self.past_speeches.push_back((most_recent_new_point, most_recent_response_block));
                 },
-                None => {
-                    if let Some(current_new_point) = mem::replace(&mut self.current_new_point, Some(most_recent_new_point)) {
-                        debug_assert!(most_recent_response_block.is_empty());
-                        self.upcoming_speeches.push_front((current_new_point, mem::replace(&mut self.first_response_block, most_recent_response_block)));
-                    }
+                None => if let Some(current_new_point) = mem::replace(&mut self.current_new_point, Some(most_recent_new_point)) {
+                    debug_assert!(most_recent_response_block.is_empty());
+                    self.upcoming_speeches.push_front((current_new_point, mem::replace(&mut self.first_response_block, most_recent_response_block)));
                 },
             }
         }
