@@ -1,3 +1,5 @@
+mod linked_list_extra;
+
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -18,6 +20,13 @@ pub enum PriorityMode {
     FirstComeFirstServe,
     FavourBriefest,
     // FavourShiest,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum GotoSpeechResult {
+    Success,
+    NoSpeechToGoTo,
+    IllegalDiscussionSomehow,
 }
 
 type ResponseBlock = LinkedList<Box<Speech>>;
@@ -274,14 +283,15 @@ impl Discussion {
 
         }
 
-
-        
-
     }
     */
 
     pub fn add_new_speech(&mut self, speaker_name: String, is_response: bool) {
 
+        // We are given a name and we need to turn that into a speaker object. We
+        //  first check the list of speakers to see if a speaker with that name
+        //  already exists. If it does we create a new pointer to them. Otherwise
+        //  we create a new speaker
         let speaker: Arc<Mutex<Speaker>> = match self.speakers.get(&speaker_name) {
             Some(speaker_p) => Arc::clone(&speaker_p),
             None => {
@@ -291,6 +301,7 @@ impl Discussion {
             },
         };
 
+        // We then create a new speech with the speaker from the previous step
         let new_speech: Box<Speech> = Box::new(
             Speech{
                 speaker: Arc::clone(&speaker), 
@@ -299,48 +310,140 @@ impl Discussion {
             }
         );
 
+        // We then add it to the speaking order in a way that makes sense
         if is_response {
-            self.first_response_block.push_back(new_speech);
+            if self.current_new_point.is_some() || !self.first_response_block.is_empty() {
+                self.first_response_block.push_back(new_speech);
+            }
         } else if self.current_new_point.is_none() && self.first_response_block.is_empty() {
             self.current_new_point = Some(new_speech);
         } else {
             self.upcoming_speeches.push_back((new_speech, LinkedList::new()));
         }
 
+        // Finally, we may need to resort the speaking order so that our new
+        //  speech ends up in the correct position.
         if self.priority_mode != PriorityMode::FirstComeFirstServe {
             self.resort_speaking_order();
         }
         
     }
 
-    pub fn goto_next_speech(&mut self) {
+    pub fn goto_next_speech(&mut self) -> GotoSpeechResult {
+        
+        //////////////////////////////////////////////////////////////////////////
+        //
+        // There are a few cases we need to consider:
+        //
+        //   1. Moving from a new point to one of its responses
+        //      - This will occur if `current_new_point` is `Some(_)` and
+        //         `first_response_block` is non-empty. 
+        //      - In this case `current_new_point` becomes `None`, and the 
+        //         previous value of `current_new_point` needs to be moved to 
+        //        `past_speeches` with an empty list as its responses
+        //
+        //   2. Moving from one response to the next response
+        //      - This will occur if `current_new_point` is `None` and there are
+        //         at least two elements in `first_response_block` (the current
+        //         response and the one we will be moving to). 
+        //      - We will need to move the first response to the back of the most
+        //         recent response block
+        //      - There is a weird contigency here in that it may be the case that
+        //         there is no past speeches. This should never happen unless
+        //         there is a bug, but we should catch it regardless
+        //
+        //   3. Moving from the last in a chain of responses to another new point
+        //      - This will occur if `current_new_point` is `None`, and there is
+        //         only one response in `first_response_block`.
+        //      - We will need to move the current response to the back of the
+        //         most recent response block, leaving it empty. Then we will
+        //         replace `current_new_point` and `first_response_block` with
+        //         items from the head of `upcoming_speeches`.
+        //      - This deals with a similar contigency as the previous case
+        //      - There is also the contingency that there are no upcoming
+        //         speeches. In this case we can just keep the current new point
+        //         and first response block as empty
+        //
+        //   4. Moving from a new point with no responses to the next new point
+        //      - This will occur if `current_new_point` is `Some(_)` and 
+        //         `first_response_block` empty.
+        //      - We will have to replace the value of `(current_new_point,
+        //         first_response_block)` with the head of `upcoming_speeches`,
+        //         and move the old value to the back of `past_speeches`
+        // 
+        //  As well as the following edge case:
+        //      
+        //      5. It may be the case that `current_new_point` is `None`, and that
+        //          there are no responses in `first_response_block`. This is in
+        //          fact the initial state of any discussion. If this is the case,
+        //          then it should also be true that `upcoming_speeches` is empty,
+        //          otherwise we've hit some kind of bug. Assuming that
+        //          `upcoming_speeches` is in fact empty, we do nothing.
+        //
+        //////////////////////////////////////////////////////////////////////////
 
-        match mem::replace(&mut self.current_new_point, None) {
-
-            Some(old_current_new_point) => self.past_speeches.push_back((old_current_new_point, LinkedList::new())),
-
-            None => match (self.first_response_block.pop_front(), self.past_speeches.back_mut()) {
-                (Some(current_response), Some((_, most_recent_response_block))) => {
-                    most_recent_response_block.push_back(current_response);
-                },
-                (None, _) => (),
-                (Some(current_response), None) => {
-                    eprintln!("You are trying to move a current response into past speeches, but there are no past speeches. Which doens't make a lot of sense. What was the current speech a response to.");
-                    debug_panic!();
-                    eprintln!("If we were in debug mode I would have panicked jut now, but clearly we're live, so I'm going to try and solve this by making the current speech into a new point. Voila. You officially have a bug!");
-                    self.past_speeches.push_back((current_response, LinkedList::new()));
-                },
+        match mem::take(&mut self.current_new_point) {
+            Some(old_cnp) => if self.first_response_block.is_empty() {
+                // Case 4
+                match self.upcoming_speeches.pop_front() {
+                    Some((next_np, next_rb)) => {
+                        self.current_new_point = Some(next_np);
+                        self.first_response_block = next_rb;
+                        self.past_speeches.push_back((old_cnp, LinkedList::new()));
+                        return GotoSpeechResult::Success;
+                    },
+                    None => {
+                        self.current_new_point = None;
+                        self.first_response_block = LinkedList::new();
+                        self.past_speeches.push_back((old_cnp, LinkedList::new()));
+                        return GotoSpeechResult::NoSpeechToGoTo;
+                    },
+                }
+            } else {
+                // Case 1
+                self.current_new_point = None;
+                self.past_speeches.push_back((old_cnp, LinkedList::new()));
+                return GotoSpeechResult::Success;
             },
 
-        }
+            None => match self.first_response_block.pop_front() {
+                Some(current_response) => match self.past_speeches.back_mut() {
+                    Some((_, previous_response_block)) => {
+                        
+                        // Case 2 and 3 first step
+                        previous_response_block.push_back(current_response);
 
-        if self.current_new_point.is_none() && self.first_response_block.is_empty() {
-            if let Some((next_new_point, next_response_block)) = self.upcoming_speeches.pop_front() {
-                self.current_new_point = Some(next_new_point);
-                self.first_response_block = next_response_block;
+
+                        if self.first_response_block.is_empty() {
+                            // Case 3
+                            match self.upcoming_speeches.pop_front() {
+                                Some((next_np, next_rb)) => {
+                                    self.current_new_point = Some(next_np);
+                                    self.first_response_block = next_rb;
+                                    return GotoSpeechResult::Success;
+                                }
+                                None => return GotoSpeechResult::NoSpeechToGoTo,
+                            }
+                        }
+                    },
+                    None => {
+                        debug_panic!();
+                        self.past_speeches.push_back((current_response, LinkedList::new()));
+                        return GotoSpeechResult::IllegalDiscussionSomehow;
+                    },
+                }
+                None => match self.upcoming_speeches.pop_front() {
+                    Some((uh_wtf, why)) => {
+                        debug_panic!();
+                        self.current_new_point = Some(uh_wtf);
+                        self.first_response_block = why;
+                        return GotoSpeechResult::Success;
+                    },
+                    None => return GotoSpeechResult::NoSpeechToGoTo,
+                }
             }
         }
-
+        return GotoSpeechResult::IllegalDiscussionSomehow;
     }
 
     pub fn goto_previous_speech(&mut self) {
