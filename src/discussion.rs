@@ -446,6 +446,7 @@ impl Discussion {
         return GotoSpeechResult::IllegalDiscussionSomehow;
     }
 
+    // TODO make this return a GotoSpeechResult and utilize it in the frontend
     pub fn goto_previous_speech(&mut self) {
         if let Some((most_recent_new_point, mut most_recent_response_block)) = self.past_speeches.pop_back() {
             match most_recent_response_block.pop_back() {
