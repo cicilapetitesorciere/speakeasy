@@ -224,6 +224,10 @@ impl Discussion {
 
     pub fn alias_names(&mut self, name1: &String, name2: &String) {
 
+        if name1 == "" || name2 == "" {
+            return;
+        }
+
         // First we try and find speakers with name1 and name2. If either of them 
         //  don't exist, then we create it
         let [speaker1_arc, speaker2_arc]: [Arc<Mutex<Speaker>>; 2] = [name1, name2].map(|name: &String| self.speakers.get(name).map(Arc::clone).unwrap_or_else(||Arc::new(Mutex::new(Speaker::new((&name).to_string())))));
@@ -285,6 +289,10 @@ impl Discussion {
     }
 
     pub fn add_new_speech(&mut self, speaker_name: String, is_response: bool) {
+
+        if speaker_name == "" {
+            return;
+        }
 
         // We are given a name and we need to turn that into a speaker object. We
         //  first check the list of speakers to see if a speaker with that name
@@ -475,4 +483,5 @@ impl Discussion {
             }
         }
     }
+
 }
