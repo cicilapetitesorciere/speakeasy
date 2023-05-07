@@ -204,7 +204,6 @@ fn http_get_status_report(id: &str) -> String {
 
 }  
 
-
 #[post("/discussion/<id>/add_speaker", format="json", data="<info>")]
 fn http_add_speaker(id: &str, info: &str) {
 
@@ -285,7 +284,7 @@ fn http_set_priority_mode(id: &str, mode: &str) {
 fn http_alias(id: &str, name1: String, name2: String) {
     match get_discussion(id) {
         Ok(discussion) => match discussion.lock() {
-            Ok(mut discussion_locked) => discussion_locked.alias_names(&name1, &name2),
+            Ok(mut discussion_locked) => discussion_locked.alias_speakers(&name1, &name2),
             Err(_) => debug_panic!(),
         }
         Err(_) => debug_panic!(),

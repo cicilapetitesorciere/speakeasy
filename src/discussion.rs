@@ -92,6 +92,8 @@ impl Discussion {
 
     }
 
+    // TODO - Fix this method. It doesn't sort speakers by brevity, even when set
+    //  to that mode. (New points work fine though)
     fn sort_response_block(block: &mut ResponseBlock, is_more_pressing: fn(&Box<Speech>, &Box<Speech>) -> bool) {
 
         // We will create a temporary variable to store the items from `block` after
@@ -130,7 +132,7 @@ impl Discussion {
     
     pub fn resort_speaking_order(&mut self) {
 
-        // First we define a function which compares two speeches `a` and `b` and
+        // First we define a closure which compares two speeches `a` and `b` and
         //  returns true if `a` should be placed before `b`.
         let is_more_pressing: fn(&Box<Speech>, &Box<Speech>) -> bool = match self.priority_mode {
 
@@ -172,7 +174,7 @@ impl Discussion {
                 Some((new_point, mut response_block)) => {
 
                     // TODO make the sorting of the block and the finding location
-                    //  to inser the pair into two seperate threads
+                    //  to insert the pair into two seperate threads
 
                     // Thread 1
                     {
@@ -222,7 +224,7 @@ impl Discussion {
         self.resort_speaking_order();
     }
 
-    pub fn alias_names(&mut self, name1: &String, name2: &String) {
+    pub fn alias_speakers(&mut self, name1: &String, name2: &String) {
 
         if name1 == "" || name2 == "" {
             return;
