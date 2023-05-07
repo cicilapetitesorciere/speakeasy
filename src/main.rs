@@ -275,9 +275,20 @@ fn http_set_priority_mode(id: &str, mode: &str) {
                     PriorityMode::FirstComeFirstServe
                 }
             }),
-            Err(_) => debug_panic!()
+            Err(_) => debug_panic!(),
         },
-        Err(_) => debug_panic!()
+        Err(_) => debug_panic!(),
+    }
+}
+
+#[post("/discussion/<id>/alias/<name1>/<name2>")]
+fn http_alias(id: &str, name1: String, name2: String) {
+    match get_discussion(id) {
+        Ok(discussion) => match discussion.lock() {
+            Ok(mut discussion_locked) => discussion_locked.alias_names(&name1, &name2),
+            Err(_) => debug_panic!(),
+        }
+        Err(_) => debug_panic!(),
     }
 }
 
@@ -294,7 +305,8 @@ fn rocket() -> _ {
         http_next,
         http_previous,
         http_pause,
-        http_set_priority_mode
+        http_set_priority_mode,
+        http_alias,
     ])
 
 }

@@ -41,3 +41,12 @@ function change_priority_mode(option) {
   fetch(window.location.href + "/set_priority_mode/" + option.value, {method: "POST"});
   refresh();
 }
+
+function aliasSpeakers() {
+  const name1 = document.getElementById("name1").value;
+  const name2 = document.getElementById("name2").value;
+  fetch(window.location.href + "/alias/" + name1 + "/" + name2, {method: "POST"});
+  document.getElementByIdById("name1").value = "";
+  document.getElementByIdById("name2").value = "";
+}
+

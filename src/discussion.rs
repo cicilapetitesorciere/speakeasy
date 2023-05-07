@@ -222,7 +222,6 @@ impl Discussion {
         self.resort_speaking_order();
     }
 
-    /*
     pub fn alias_names(&mut self, name1: &String, name2: &String) {
 
         // First we try and find speakers with name1 and name2. If either of them 
@@ -284,7 +283,6 @@ impl Discussion {
         }
 
     }
-    */
 
     pub fn add_new_speech(&mut self, speaker_name: String, is_response: bool) {
 

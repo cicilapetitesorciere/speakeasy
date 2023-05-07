@@ -25,7 +25,6 @@ impl Speaker {
         }
     }
 
-    /*
     pub fn merge_with(&mut self, other: Self) {
         for alias in other.aliases {
             self.aliases.insert(alias);
@@ -35,7 +34,7 @@ impl Speaker {
         self.number_of_speeches_given += other.number_of_speeches_given;
     }
     
-
+    /*
     pub fn has_the_same_name_as(&self, other: Self) -> Option<&String> {
 
         if self.name == other.name || other.aliases.contains(&self.name) {
@@ -49,7 +48,6 @@ impl Speaker {
         }
 
         return None;
-
     }
     */
 
